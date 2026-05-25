@@ -11,8 +11,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEFAULT_WELCOME_MESSAGE = (
-    "Hola {member}, bienvenido/a a **{server}**. Ya somos **{total}** miembros."
+    "{member}\n\n"
+    "Bienvenido/a a **{server}**. Pasa por las reglas, presentate y disfruta la comunidad.\n\n"
+    "Ahora somos **{total}** miembros."
 )
+DEFAULT_WELCOME_TITLE = "Bienvenido/a, {username}"
 DEFAULT_DM_MESSAGE = (
     "Gracias por entrar a {server}, {username}. Lee las reglas y ponte comodo/a."
 )
@@ -23,7 +26,10 @@ CHANNEL_FALLBACKS = ("bienvenida", "bienvenidas", "welcome", "general")
 class Settings:
     token: str
     welcome_channel_id: int | None
+    welcome_title: str
     welcome_message: str
+    welcome_embed_color: int
+    welcome_ping_outside_embed: bool
     welcome_dm_enabled: bool
     welcome_dm_message: str
     bot_status: str
@@ -48,6 +54,23 @@ def parse_optional_int(name: str) -> int | None:
         raise RuntimeError(f"{name} debe ser un numero, pero recibio: {value}") from exc
 
 
+def parse_hex_color(name: str, default: str) -> int:
+    value = os.getenv(name, default).strip().removeprefix("#")
+    try:
+        color = int(value, 16)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} debe ser un color HEX, por ejemplo 5865F2.") from exc
+
+    if not 0 <= color <= 0xFFFFFF:
+        raise RuntimeError(f"{name} debe estar entre 000000 y FFFFFF.")
+
+    return color
+
+
+def load_template(name: str, default: str) -> str:
+    return os.getenv(name, default).replace("\\n", "\n")
+
+
 def load_settings() -> Settings:
     token = os.getenv("DISCORD_TOKEN", "").strip()
     if not token:
@@ -56,9 +79,12 @@ def load_settings() -> Settings:
     return Settings(
         token=token,
         welcome_channel_id=parse_optional_int("WELCOME_CHANNEL_ID"),
-        welcome_message=os.getenv("WELCOME_MESSAGE", DEFAULT_WELCOME_MESSAGE),
+        welcome_title=load_template("WELCOME_TITLE", DEFAULT_WELCOME_TITLE),
+        welcome_message=load_template("WELCOME_MESSAGE", DEFAULT_WELCOME_MESSAGE),
+        welcome_embed_color=parse_hex_color("WELCOME_EMBED_COLOR", "5865F2"),
+        welcome_ping_outside_embed=parse_bool(os.getenv("WELCOME_PING_OUTSIDE_EMBED"), default=False),
         welcome_dm_enabled=parse_bool(os.getenv("WELCOME_DM_ENABLED"), default=False),
-        welcome_dm_message=os.getenv("WELCOME_DM_MESSAGE", DEFAULT_DM_MESSAGE),
+        welcome_dm_message=load_template("WELCOME_DM_MESSAGE", DEFAULT_DM_MESSAGE),
         bot_status=os.getenv("BOT_STATUS", "dando la bienvenida"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
     )
@@ -149,23 +175,38 @@ async def resolve_welcome_channel(guild: discord.Guild) -> discord.TextChannel |
 
 
 def build_welcome_embed(member: discord.Member) -> discord.Embed:
-    embed = discord.Embed(
-        title=f"Bienvenido/a a {member.guild.name}",
-        description=(
-            f"{member.mention}, nos alegra tenerte aqui.\n"
-            "Pasa por las reglas, presentate y disfruta el servidor."
-        ),
-        color=discord.Color.from_rgb(88, 101, 242),
+    title = format_member_template(
+        settings.welcome_title,
+        member,
+        DEFAULT_WELCOME_TITLE,
     )
+    description = format_member_template(
+        settings.welcome_message,
+        member,
+        DEFAULT_WELCOME_MESSAGE,
+    )
+
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=discord.Color(settings.welcome_embed_color),
+        timestamp=discord.utils.utcnow(),
+    )
+
+    if member.guild.icon is not None:
+        embed.set_author(name=member.guild.name, icon_url=member.guild.icon.url)
+    else:
+        embed.set_author(name=member.guild.name)
+
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="Usuario", value=member.display_name, inline=True)
+    embed.add_field(name="Usuario", value=f"{member.display_name}\n`{member.id}`", inline=True)
     embed.add_field(name="Miembro", value=f"#{guild_total(member)}", inline=True)
     embed.add_field(
         name="Cuenta creada",
         value=discord.utils.format_dt(member.created_at, style="R"),
-        inline=False,
+        inline=True,
     )
-    embed.set_footer(text=f"Servidor: {member.guild.name}")
+    embed.set_footer(text="Bienvenida automatica")
     return embed
 
 
@@ -207,11 +248,7 @@ class WelcomeClient(discord.Client):
             logger.warning("No encontre canal de bienvenida para %s.", member.guild.name)
             return
 
-        content = format_member_template(
-            settings.welcome_message,
-            member,
-            DEFAULT_WELCOME_MESSAGE,
-        )
+        content = member.mention if settings.welcome_ping_outside_embed else None
 
         try:
             await channel.send(content=content, embed=build_welcome_embed(member))
