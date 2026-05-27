@@ -99,7 +99,7 @@ def load_settings() -> Settings:
         welcome_message=load_template("WELCOME_MESSAGE", DEFAULT_WELCOME_MESSAGE),
         welcome_links=load_template("WELCOME_LINKS", DEFAULT_WELCOME_LINKS),
         welcome_decoration=load_template("WELCOME_DECORATION", DEFAULT_WELCOME_DECORATION),
-        welcome_embed_color=parse_hex_color("WELCOME_EMBED_COLOR", "F2A7C6"),
+        welcome_embed_color=parse_hex_color("WELCOME_EMBED_COLOR", "FFFFFF"),
         welcome_thumbnail_url=os.getenv("WELCOME_THUMBNAIL_URL", "").strip(),
         welcome_banner_url=os.getenv("WELCOME_BANNER_URL", "").strip(),
         welcome_banner_file=os.getenv("WELCOME_BANNER_FILE", "").strip(),

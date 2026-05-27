@@ -29,7 +29,7 @@ WELCOME_TITLE="Welcome {member}"
 WELCOME_INTRO="**Welcome {member} To {server}**"
 WELCOME_MESSAGE="**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}"
 WELCOME_LINKS="Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)"
-WELCOME_EMBED_COLOR=F2A7C6
+WELCOME_EMBED_COLOR=FFFFFF
 WELCOME_BANNER_URL="https://tusitio.com/welcome-banner.png"
 ```
 
@@ -50,7 +50,7 @@ Opciones visuales:
 - `WELCOME_INTRO` muestra la linea destacada debajo del titulo
 - `WELCOME_LINKS` crea la lista del embed; usa una linea por item
 - `WELCOME_DECORATION` cambia el detalle que aparece antes de cada link y en el cierre
-- `WELCOME_EMBED_COLOR=F2A7C6` cambia el color lateral del embed usando HEX
+- `WELCOME_EMBED_COLOR=FFFFFF` cambia el color lateral del embed usando HEX
 - `WELCOME_THUMBNAIL_URL` cambia la imagen pequena de la derecha; vacio usa el avatar del usuario
 - `WELCOME_BANNER_URL` agrega una imagen grande al final del embed
 - `WELCOME_BANNER_FILE=assets/welcome-banner.png` usa una imagen subida junto al bot
@@ -86,7 +86,7 @@ WELCOME_TITLE=Welcome {member}
 WELCOME_INTRO=**Welcome {member} To {server}**
 WELCOME_MESSAGE=**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}
 WELCOME_LINKS=Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)
-WELCOME_EMBED_COLOR=F2A7C6
+WELCOME_EMBED_COLOR=FFFFFF
 WELCOME_BANNER_URL=https://tusitio.com/welcome-banner.png
 WELCOME_PING_OUTSIDE_EMBED=false
 ```
