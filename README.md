@@ -25,12 +25,14 @@ Edita el archivo `.env`:
 ```env
 DISCORD_TOKEN="pega_aqui_el_token"
 WELCOME_CHANNEL_ID="123456789012345678"
+WELCOME_MODE=card
 WELCOME_TITLE="Welcome {member}"
 WELCOME_INTRO="**Welcome {member} To {server}**"
 WELCOME_MESSAGE="**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}"
 WELCOME_LINKS="Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)"
 WELCOME_EMBED_COLOR=FFFFFF
-WELCOME_BANNER_URL="https://tusitio.com/welcome-banner.png"
+WELCOME_CARD_ACCENT_COLOR=F2A7C6
+WELCOME_BANNER_FILE="assets/welcome.jpg"
 ```
 
 Para sacar el ID del canal: activa el modo desarrollador en Discord, clic derecho sobre el canal de bienvenida y copia el ID.
@@ -47,10 +49,17 @@ Variables disponibles para el mensaje:
 
 Opciones visuales:
 
+- `WELCOME_MODE=card` envia una imagen disenada y mas ancha
+- `WELCOME_MODE=embed` usa el embed normal de Discord
 - `WELCOME_INTRO` muestra la linea destacada debajo del titulo
 - `WELCOME_LINKS` crea la lista del embed; usa una linea por item
 - `WELCOME_DECORATION` cambia el detalle que aparece antes de cada link y en el cierre
 - `WELCOME_EMBED_COLOR=FFFFFF` cambia el color lateral del embed usando HEX
+- `WELCOME_CARD_ACCENT_COLOR=F2A7C6` cambia detalles decorativos de la tarjeta
+- `WELCOME_CARD_BACKGROUND=111318` cambia el fondo de la tarjeta disenada
+- `WELCOME_CARD_TEXT_COLOR=F4F4F5` cambia el texto principal
+- `WELCOME_CARD_MUTED_COLOR=C9CDD6` cambia el texto secundario
+- `WELCOME_CARD_LINK_COLOR=4DA3FF` cambia el color de links dibujados en la tarjeta
 - `WELCOME_THUMBNAIL_URL` cambia la imagen pequena de la derecha; vacio usa el avatar del usuario
 - `WELCOME_BANNER_URL` agrega una imagen grande al final del embed
 - `WELCOME_BANNER_FILE=assets/welcome-banner.png` usa una imagen subida junto al bot
@@ -58,6 +67,8 @@ Opciones visuales:
 - `WELCOME_PING_OUTSIDE_EMBED=true` menciona al usuario fuera del embed para que reciba ping real
 - Puedes usar `\n` dentro de `WELCOME_MESSAGE` para crear saltos de linea
 - Puedes usar links Markdown: `[texto](https://url.com)` dentro de `WELCOME_LINKS`
+
+En `WELCOME_MODE=card`, los links se dibujan como texto dentro de la imagen y no son clickeables. Si necesitas que sean clickeables, usa `WELCOME_MODE=embed` o manda los links en otro canal.
 
 ## Ejecutar
 
@@ -82,12 +93,18 @@ Variables minimas:
 ```env
 DISCORD_TOKEN=tu_token_real
 WELCOME_CHANNEL_ID=id_del_canal_de_bienvenida
+WELCOME_MODE=card
 WELCOME_TITLE=Welcome {member}
 WELCOME_INTRO=**Welcome {member} To {server}**
 WELCOME_MESSAGE=**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}
 WELCOME_LINKS=Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)
 WELCOME_EMBED_COLOR=FFFFFF
-WELCOME_BANNER_URL=https://tusitio.com/welcome-banner.png
+WELCOME_CARD_ACCENT_COLOR=F2A7C6
+WELCOME_CARD_BACKGROUND=111318
+WELCOME_CARD_TEXT_COLOR=F4F4F5
+WELCOME_CARD_MUTED_COLOR=C9CDD6
+WELCOME_CARD_LINK_COLOR=4DA3FF
+WELCOME_BANNER_FILE=assets/welcome.jpg
 WELCOME_PING_OUTSIDE_EMBED=false
 ```
 
