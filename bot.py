@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from dataclasses import dataclass
 
 import discord
@@ -11,11 +12,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEFAULT_WELCOME_MESSAGE = (
-    "{member}\n\n"
-    "Bienvenido/a a **{server}**. Pasa por las reglas, presentate y disfruta la comunidad.\n\n"
-    "Ahora somos **{total}** miembros."
+    "**Glad to have you here**\n\n"
+    "{links}\n\n"
+    "{decoration} Thank you for joining us, have fun {decoration}"
 )
-DEFAULT_WELCOME_TITLE = "Bienvenido/a, {username}"
+DEFAULT_WELCOME_TITLE = "Welcome {member}"
+DEFAULT_WELCOME_INTRO = "**Welcome {member} To {server}**"
+DEFAULT_WELCOME_LINKS = (
+    "Make sure to read the Server Rules\n"
+    "Check our latest Updates\n"
+    "For IP/Port Click Here\n"
+    "Need Help? Check our Ticket Support"
+)
+DEFAULT_WELCOME_DECORATION = "\U0001F338"
 DEFAULT_DM_MESSAGE = (
     "Gracias por entrar a {server}, {username}. Lee las reglas y ponte comodo/a."
 )
@@ -27,8 +36,14 @@ class Settings:
     token: str
     welcome_channel_id: int | None
     welcome_title: str
+    welcome_intro: str
     welcome_message: str
+    welcome_links: str
+    welcome_decoration: str
     welcome_embed_color: int
+    welcome_thumbnail_url: str
+    welcome_banner_url: str
+    welcome_banner_file: str
     welcome_ping_outside_embed: bool
     welcome_dm_enabled: bool
     welcome_dm_message: str
@@ -80,8 +95,14 @@ def load_settings() -> Settings:
         token=token,
         welcome_channel_id=parse_optional_int("WELCOME_CHANNEL_ID"),
         welcome_title=load_template("WELCOME_TITLE", DEFAULT_WELCOME_TITLE),
+        welcome_intro=load_template("WELCOME_INTRO", DEFAULT_WELCOME_INTRO),
         welcome_message=load_template("WELCOME_MESSAGE", DEFAULT_WELCOME_MESSAGE),
-        welcome_embed_color=parse_hex_color("WELCOME_EMBED_COLOR", "5865F2"),
+        welcome_links=load_template("WELCOME_LINKS", DEFAULT_WELCOME_LINKS),
+        welcome_decoration=load_template("WELCOME_DECORATION", DEFAULT_WELCOME_DECORATION),
+        welcome_embed_color=parse_hex_color("WELCOME_EMBED_COLOR", "F2A7C6"),
+        welcome_thumbnail_url=os.getenv("WELCOME_THUMBNAIL_URL", "").strip(),
+        welcome_banner_url=os.getenv("WELCOME_BANNER_URL", "").strip(),
+        welcome_banner_file=os.getenv("WELCOME_BANNER_FILE", "").strip(),
         welcome_ping_outside_embed=parse_bool(os.getenv("WELCOME_PING_OUTSIDE_EMBED"), default=False),
         welcome_dm_enabled=parse_bool(os.getenv("WELCOME_DM_ENABLED"), default=False),
         welcome_dm_message=load_template("WELCOME_DM_MESSAGE", DEFAULT_DM_MESSAGE),
@@ -105,20 +126,54 @@ def guild_total(member: discord.Member) -> str:
     return "?"
 
 
-def format_member_template(template: str, member: discord.Member, fallback: str) -> str:
+def template_values(member: discord.Member, extra: dict[str, str] | None = None) -> dict[str, str]:
     values = {
         "member": member.mention,
         "username": member.display_name,
         "tag": str(member),
         "server": member.guild.name,
         "total": guild_total(member),
+        "decoration": settings.welcome_decoration,
     }
+    if extra is not None:
+        values.update(extra)
 
+    return values
+
+
+def format_member_template(
+    template: str,
+    member: discord.Member,
+    fallback: str,
+    extra: dict[str, str] | None = None,
+) -> str:
     try:
-        return template.format(**values)
+        return template.format(**template_values(member, extra))
     except (KeyError, ValueError) as exc:
         logger.warning("Plantilla invalida en .env: %s. Usando mensaje por defecto.", exc)
-        return fallback.format(**values)
+        return fallback.format(**template_values(member, extra))
+
+
+def render_welcome_links(member: discord.Member) -> str:
+    lines: list[str] = []
+    for raw_line in settings.welcome_links.splitlines():
+        raw_line = raw_line.strip()
+        if not raw_line:
+            continue
+
+        line = format_member_template(raw_line, member, raw_line)
+        if "|" in line:
+            label, target = [part.strip() for part in line.split("|", 1)]
+            if target.startswith(("http://", "https://")):
+                line = f"[{label}]({target})"
+            elif target:
+                line = f"{label} {target}"
+            else:
+                line = label
+
+        lines.append(f"{settings.welcome_decoration} {line}")
+
+    return "\n".join(lines)
 
 
 def can_send_in(channel: discord.TextChannel | discord.Thread) -> bool:
@@ -174,21 +229,40 @@ async def resolve_welcome_channel(guild: discord.Guild) -> discord.TextChannel |
     return None
 
 
-def build_welcome_embed(member: discord.Member) -> discord.Embed:
+def resolve_banner_file() -> discord.File | None:
+    if not settings.welcome_banner_file:
+        return None
+
+    file_path = Path(settings.welcome_banner_file)
+    if not file_path.exists() or not file_path.is_file():
+        logger.warning("WELCOME_BANNER_FILE no existe o no es un archivo: %s", file_path)
+        return None
+
+    return discord.File(file_path, filename=file_path.name)
+
+
+def build_welcome_embed(member: discord.Member, banner_file: discord.File | None = None) -> discord.Embed:
+    links = render_welcome_links(member)
     title = format_member_template(
         settings.welcome_title,
         member,
         DEFAULT_WELCOME_TITLE,
     )
+    intro = format_member_template(
+        settings.welcome_intro,
+        member,
+        DEFAULT_WELCOME_INTRO,
+    )
     description = format_member_template(
         settings.welcome_message,
         member,
         DEFAULT_WELCOME_MESSAGE,
+        extra={"links": links},
     )
 
     embed = discord.Embed(
         title=title,
-        description=description,
+        description=f"{intro}\n\n{description}",
         color=discord.Color(settings.welcome_embed_color),
         timestamp=discord.utils.utcnow(),
     )
@@ -198,15 +272,15 @@ def build_welcome_embed(member: discord.Member) -> discord.Embed:
     else:
         embed.set_author(name=member.guild.name)
 
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.add_field(name="Usuario", value=f"{member.display_name}\n`{member.id}`", inline=True)
-    embed.add_field(name="Miembro", value=f"#{guild_total(member)}", inline=True)
-    embed.add_field(
-        name="Cuenta creada",
-        value=discord.utils.format_dt(member.created_at, style="R"),
-        inline=True,
-    )
-    embed.set_footer(text="Bienvenida automatica")
+    thumbnail_url = settings.welcome_thumbnail_url or member.display_avatar.url
+    embed.set_thumbnail(url=thumbnail_url)
+
+    if banner_file is not None:
+        embed.set_image(url=f"attachment://{banner_file.filename}")
+    elif settings.welcome_banner_url:
+        embed.set_image(url=settings.welcome_banner_url)
+
+    embed.set_footer(text=f"Member #{guild_total(member)}")
     return embed
 
 
@@ -250,8 +324,17 @@ class WelcomeClient(discord.Client):
 
         content = member.mention if settings.welcome_ping_outside_embed else None
 
+        banner_file = resolve_banner_file()
+
+        send_kwargs = {
+            "content": content,
+            "embed": build_welcome_embed(member, banner_file),
+        }
+        if banner_file is not None:
+            send_kwargs["file"] = banner_file
+
         try:
-            await channel.send(content=content, embed=build_welcome_embed(member))
+            await channel.send(**send_kwargs)
         except discord.Forbidden:
             logger.warning("No tengo permisos para enviar bienvenidas en #%s.", channel.name)
             return

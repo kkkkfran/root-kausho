@@ -25,8 +25,12 @@ Edita el archivo `.env`:
 ```env
 DISCORD_TOKEN="pega_aqui_el_token"
 WELCOME_CHANNEL_ID="123456789012345678"
-WELCOME_TITLE="Bienvenido/a, {username}"
-WELCOME_MESSAGE="{member}\n\nBienvenido/a a **{server}**. Pasa por las reglas, presentate y disfruta la comunidad.\n\nAhora somos **{total}** miembros."
+WELCOME_TITLE="Welcome {member}"
+WELCOME_INTRO="**Welcome {member} To {server}**"
+WELCOME_MESSAGE="**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}"
+WELCOME_LINKS="Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)"
+WELCOME_EMBED_COLOR=F2A7C6
+WELCOME_BANNER_URL="https://tusitio.com/welcome-banner.png"
 ```
 
 Para sacar el ID del canal: activa el modo desarrollador en Discord, clic derecho sobre el canal de bienvenida y copia el ID.
@@ -38,13 +42,22 @@ Variables disponibles para el mensaje:
 - `{tag}` muestra su usuario completo
 - `{server}` muestra el nombre del servidor
 - `{total}` muestra el total de miembros
+- `{links}` inserta la lista de `WELCOME_LINKS`
+- `{decoration}` inserta el detalle decorativo del bot
 
 Opciones visuales:
 
-- `WELCOME_EMBED_COLOR=5865F2` cambia el color lateral del embed usando HEX
+- `WELCOME_INTRO` muestra la linea destacada debajo del titulo
+- `WELCOME_LINKS` crea la lista del embed; usa una linea por item
+- `WELCOME_DECORATION` cambia el detalle que aparece antes de cada link y en el cierre
+- `WELCOME_EMBED_COLOR=F2A7C6` cambia el color lateral del embed usando HEX
+- `WELCOME_THUMBNAIL_URL` cambia la imagen pequena de la derecha; vacio usa el avatar del usuario
+- `WELCOME_BANNER_URL` agrega una imagen grande al final del embed
+- `WELCOME_BANNER_FILE=assets/welcome-banner.png` usa una imagen subida junto al bot
 - `WELCOME_PING_OUTSIDE_EMBED=false` mantiene todo dentro del embed
 - `WELCOME_PING_OUTSIDE_EMBED=true` menciona al usuario fuera del embed para que reciba ping real
 - Puedes usar `\n` dentro de `WELCOME_MESSAGE` para crear saltos de linea
+- Puedes usar links Markdown: `[texto](https://url.com)` dentro de `WELCOME_LINKS`
 
 ## Ejecutar
 
@@ -69,9 +82,12 @@ Variables minimas:
 ```env
 DISCORD_TOKEN=tu_token_real
 WELCOME_CHANNEL_ID=id_del_canal_de_bienvenida
-WELCOME_TITLE=Bienvenido/a, {username}
-WELCOME_MESSAGE={member}\n\nBienvenido/a a **{server}**. Pasa por las reglas, presentate y disfruta la comunidad.\n\nAhora somos **{total}** miembros.
-WELCOME_EMBED_COLOR=5865F2
+WELCOME_TITLE=Welcome {member}
+WELCOME_INTRO=**Welcome {member} To {server}**
+WELCOME_MESSAGE=**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}
+WELCOME_LINKS=Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)
+WELCOME_EMBED_COLOR=F2A7C6
+WELCOME_BANNER_URL=https://tusitio.com/welcome-banner.png
 WELCOME_PING_OUTSIDE_EMBED=false
 ```
 
