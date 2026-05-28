@@ -1,16 +1,28 @@
-# Bot de bienvenida para Discord
+# Bot oficial de Discord
 
-Bot base en Python para saludar automaticamente a usuarios nuevos del servidor.
+Bot modular para el servidor oficial. Cada funcion vive en su propia zona dentro de `root_bot/features`.
+
+## Estructura
+
+```text
+bot.py                    # Arranque para local y Railway
+root_bot/config.py        # Variables de entorno y defaults
+root_bot/client.py        # Cliente del bot y sincronizacion de comandos
+root_bot/features/
+  welcome.py              # Bienvenida de miembros
+  rules.py                # Comando /reglas
+assets/                   # Imagenes opcionales para embeds
+```
 
 ## Requisitos
 
 - Python 3.10 o superior
 - Un bot creado en el Discord Developer Portal
-- El intent **Server Members Intent** activado en la pagina del bot
+- Scope `bot`
+- Scope `applications.commands` para comandos slash
+- Intent **Server Members Intent** activado para la bienvenida
 
 ## Instalacion
-
-Desde esta carpeta:
 
 ```powershell
 py -m venv .venv
@@ -20,22 +32,28 @@ python -m pip install -r requirements.txt
 
 ## Configuracion
 
-Edita el archivo `.env`:
+Edita `.env` en local o usa Railway Variables:
 
 ```env
 DISCORD_TOKEN="pega_aqui_el_token"
-WELCOME_CHANNEL_ID="123456789012345678"
-WELCOME_TITLE="Welcome {member}"
-WELCOME_INTRO="**Welcome {member} To {server}**"
-WELCOME_MESSAGE="**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}"
-WELCOME_LINKS="Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)"
-WELCOME_EMBED_COLOR=FFFFFF
-WELCOME_BANNER_URL="https://tusitio.com/welcome-banner.png"
+DISCORD_GUILD_ID="id_de_tu_servidor"
+WELCOME_CHANNEL_ID="id_del_canal_de_bienvenida"
+RULES_EMBED_COLOR=E53935
 ```
 
-Para sacar el ID del canal: activa el modo desarrollador en Discord, clic derecho sobre el canal de bienvenida y copia el ID.
+`DISCORD_GUILD_ID` es recomendado para que `/reglas` aparezca rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
 
-Variables disponibles para el mensaje:
+## Comandos
+
+### `/reglas`
+
+Publica un embed rojo con reglas generales del servidor.
+
+Solo pueden usarlo personas con permiso **Manage Server**. Puedes ejecutarlo en el canal donde quieres publicar las reglas, o elegir otro canal desde el parametro `canal`.
+
+## Bienvenida
+
+Variables disponibles:
 
 - `{member}` menciona al usuario nuevo
 - `{username}` muestra su nombre visible
@@ -45,19 +63,18 @@ Variables disponibles para el mensaje:
 - `{links}` inserta la lista de `WELCOME_LINKS`
 - `{decoration}` inserta el detalle decorativo del bot
 
-Opciones visuales:
+Opciones:
 
-- `WELCOME_INTRO` muestra la linea destacada debajo del titulo
-- `WELCOME_LINKS` crea la lista del embed; usa una linea por item
-- `WELCOME_DECORATION` cambia el detalle que aparece antes de cada link y en el cierre
-- `WELCOME_EMBED_COLOR=FFFFFF` cambia el color lateral del embed usando HEX
-- `WELCOME_THUMBNAIL_URL` cambia la imagen pequena de la derecha; vacio usa el avatar del usuario
-- `WELCOME_BANNER_URL` agrega una imagen grande al final del embed
-- `WELCOME_BANNER_FILE=assets/welcome-banner.png` usa una imagen subida junto al bot
+- `WELCOME_TITLE` titulo del embed
+- `WELCOME_INTRO` linea destacada debajo del titulo
+- `WELCOME_MESSAGE` cuerpo del embed
+- `WELCOME_LINKS` lista de enlaces o mensajes, una linea por item
+- `WELCOME_EMBED_COLOR=FFFFFF` color lateral del embed
+- `WELCOME_THUMBNAIL_URL` imagen pequena; vacio usa avatar del usuario
+- `WELCOME_BANNER_URL` imagen grande por URL
+- `WELCOME_BANNER_FILE=assets/welcome.jpg` imagen subida junto al bot
 - `WELCOME_PING_OUTSIDE_EMBED=false` mantiene todo dentro del embed
-- `WELCOME_PING_OUTSIDE_EMBED=true` menciona al usuario fuera del embed para que reciba ping real
-- Puedes usar `\n` dentro de `WELCOME_MESSAGE` para crear saltos de linea
-- Puedes usar links Markdown: `[texto](https://url.com)` dentro de `WELCOME_LINKS`
+- `WELCOME_PING_OUTSIDE_EMBED=true` menciona al usuario fuera del embed
 
 ## Ejecutar
 
@@ -65,42 +82,34 @@ Opciones visuales:
 python bot.py
 ```
 
-## Subir a Railway
+## Railway
 
-Este proyecto ya incluye `railway.toml`, asi que Railway debe iniciar el bot con:
+El proyecto ya incluye `railway.toml`, asi que Railway debe iniciar con:
 
 ```bash
 python bot.py
 ```
 
-No subas tu token dentro de `.env`. En Railway configuralo desde:
-
-`Service -> Variables -> New Variable`
-
-Variables minimas:
+Variables minimas en Railway:
 
 ```env
 DISCORD_TOKEN=tu_token_real
+DISCORD_GUILD_ID=id_de_tu_servidor
 WELCOME_CHANNEL_ID=id_del_canal_de_bienvenida
-WELCOME_TITLE=Welcome {member}
-WELCOME_INTRO=**Welcome {member} To {server}**
-WELCOME_MESSAGE=**Glad to have you here**\n\n{links}\n\n{decoration} Thank you for joining us, have fun {decoration}
-WELCOME_LINKS=Make sure to read the [Server Rules](https://tusitio.com/rules)\nCheck our latest [Updates](https://tusitio.com/updates)\nFor IP/Port [Click Here](https://tusitio.com/play)\nNeed Help? Check our [Ticket Support](https://tusitio.com/support)
-WELCOME_EMBED_COLOR=FFFFFF
-WELCOME_BANNER_URL=https://tusitio.com/welcome-banner.png
-WELCOME_PING_OUTSIDE_EMBED=false
+RULES_EMBED_COLOR=E53935
 ```
 
-Railway tambien puede sugerir variables desde `.env.example`. Si usas GitHub, cada push al repo puede desplegar una nueva version del bot.
+## Permisos del bot
 
-## Permisos recomendados
+Al invitar el bot, usa los scopes `bot` y `applications.commands`.
 
-Al invitar el bot, usa el scope `bot` y dale estos permisos:
+Permisos recomendados:
 
 - View Channels
 - Send Messages
 - Embed Links
+- Read Message History
 
-Para que `on_member_join` funcione, tambien debes activar **Server Members Intent** en:
+Para la bienvenida, activa:
 
-`Discord Developer Portal -> Applications -> tu app -> Bot -> Privileged Gateway Intents`.
+`Discord Developer Portal -> Applications -> tu app -> Bot -> Privileged Gateway Intents -> Server Members Intent`
