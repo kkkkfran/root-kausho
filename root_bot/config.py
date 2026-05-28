@@ -24,6 +24,7 @@ DEFAULT_WELCOME_LINKS = (
 DEFAULT_WELCOME_DECORATION = "\U0001F338"
 DEFAULT_DM_MESSAGE = "Gracias por entrar a {server}, {username}. Lee las reglas y ponte comodo/a."
 DEFAULT_TICKET_CHANNEL_ID = 1509405048629755914
+DEFAULT_TICKET_CATEGORY_ID = 1509407852681367632
 DEFAULT_TICKET_URL = "https://discord.com/channels/1267197911498887332/1509405048629755914"
 
 
@@ -47,6 +48,10 @@ class Settings:
     rules_embed_color: int
     about_embed_color: int
     ticket_channel_id: int | None
+    ticket_category_id: int | None
+    ticket_staff_role_id: int | None
+    ticket_panel_embed_color: int
+    ticket_terms_embed_color: int
     ticket_url: str
     bot_status: str
     log_level: str
@@ -111,6 +116,10 @@ def load_settings() -> Settings:
         rules_embed_color=parse_hex_color("RULES_EMBED_COLOR", "E53935"),
         about_embed_color=parse_hex_color("ABOUT_EMBED_COLOR", "111111"),
         ticket_channel_id=parse_optional_int("TICKET_CHANNEL_ID") or DEFAULT_TICKET_CHANNEL_ID,
+        ticket_category_id=parse_optional_int("TICKET_CATEGORY_ID") or DEFAULT_TICKET_CATEGORY_ID,
+        ticket_staff_role_id=parse_optional_int("TICKET_STAFF_ROLE_ID"),
+        ticket_panel_embed_color=parse_hex_color("TICKET_PANEL_EMBED_COLOR", "111111"),
+        ticket_terms_embed_color=parse_hex_color("TICKET_TERMS_EMBED_COLOR", "111111"),
         ticket_url=os.getenv("TICKET_URL", DEFAULT_TICKET_URL).strip() or DEFAULT_TICKET_URL,
         bot_status=os.getenv("BOT_STATUS", "dando la bienvenida"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),

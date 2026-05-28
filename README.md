@@ -12,6 +12,7 @@ root_bot/features/
   welcome.py              # Bienvenida de miembros
   rules.py                # Comando /reglas
   about.py                # Comando /servidor y enlace a tickets
+  tickets.py              # Panel, creacion y cierre de tickets
 assets/                   # Imagenes opcionales para embeds
 ```
 
@@ -42,6 +43,10 @@ WELCOME_CHANNEL_ID="id_del_canal_de_bienvenida"
 RULES_EMBED_COLOR=E53935
 ABOUT_EMBED_COLOR=111111
 TICKET_CHANNEL_ID=1509405048629755914
+TICKET_CATEGORY_ID=1509407852681367632
+TICKET_STAFF_ROLE_ID=""
+TICKET_PANEL_EMBED_COLOR=111111
+TICKET_TERMS_EMBED_COLOR=111111
 TICKET_URL="https://discord.com/channels/1267197911498887332/1509405048629755914"
 ```
 
@@ -65,6 +70,24 @@ Incluye un boton **Crear ticket** usando:
 - `TICKET_URL`
 
 Solo pueden usarlo personas con permiso **Manage Server**. Puedes ejecutarlo en el canal donde quieres publicarlo, o elegir otro canal desde el parametro `canal`.
+
+### `/panel-ticket`
+
+Publica el panel de tickets en `TICKET_CHANNEL_ID` o en el canal que elijas con el parametro `canal`.
+
+El panel muestra un selector con motivos:
+
+- Soporte tecnico
+- Comprar o cotizar
+- Proponer una idea
+- Bot de Discord
+- Pagina web o panel
+- Automatizacion
+- Ayuda general
+
+Cuando una persona selecciona una opcion, el bot crea un canal privado dentro de `TICKET_CATEGORY_ID`. Antes de continuar, la persona debe aceptar los terminos de uso del servicio. Si rechaza, el ticket se cierra automaticamente.
+
+Si configuras `TICKET_STAFF_ROLE_ID`, ese rol tambien podra ver y responder tickets. Si lo dejas vacio, solo el usuario, el bot y quienes tengan permisos administrativos podran acceder.
 
 ## Bienvenida
 
@@ -114,6 +137,10 @@ WELCOME_CHANNEL_ID=id_del_canal_de_bienvenida
 RULES_EMBED_COLOR=E53935
 ABOUT_EMBED_COLOR=111111
 TICKET_CHANNEL_ID=1509405048629755914
+TICKET_CATEGORY_ID=1509407852681367632
+TICKET_STAFF_ROLE_ID=
+TICKET_PANEL_EMBED_COLOR=111111
+TICKET_TERMS_EMBED_COLOR=111111
 TICKET_URL=https://discord.com/channels/1267197911498887332/1509405048629755914
 ```
 
@@ -127,6 +154,8 @@ Permisos recomendados:
 - Send Messages
 - Embed Links
 - Read Message History
+- Manage Channels
+- Manage Messages
 
 Para la bienvenida, activa:
 
