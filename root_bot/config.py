@@ -23,6 +23,8 @@ DEFAULT_WELCOME_LINKS = (
 )
 DEFAULT_WELCOME_DECORATION = "\U0001F338"
 DEFAULT_DM_MESSAGE = "Gracias por entrar a {server}, {username}. Lee las reglas y ponte comodo/a."
+DEFAULT_TICKET_CHANNEL_ID = 1509405048629755914
+DEFAULT_TICKET_URL = "https://discord.com/channels/1267197911498887332/1509405048629755914"
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,9 @@ class Settings:
     welcome_dm_enabled: bool
     welcome_dm_message: str
     rules_embed_color: int
+    about_embed_color: int
+    ticket_channel_id: int | None
+    ticket_url: str
     bot_status: str
     log_level: str
 
@@ -104,6 +109,9 @@ def load_settings() -> Settings:
         welcome_dm_enabled=parse_bool(os.getenv("WELCOME_DM_ENABLED"), default=False),
         welcome_dm_message=load_template("WELCOME_DM_MESSAGE", DEFAULT_DM_MESSAGE),
         rules_embed_color=parse_hex_color("RULES_EMBED_COLOR", "E53935"),
+        about_embed_color=parse_hex_color("ABOUT_EMBED_COLOR", "111111"),
+        ticket_channel_id=parse_optional_int("TICKET_CHANNEL_ID") or DEFAULT_TICKET_CHANNEL_ID,
+        ticket_url=os.getenv("TICKET_URL", DEFAULT_TICKET_URL).strip() or DEFAULT_TICKET_URL,
         bot_status=os.getenv("BOT_STATUS", "dando la bienvenida"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
     )

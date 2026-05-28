@@ -11,6 +11,7 @@ root_bot/client.py        # Cliente del bot y sincronizacion de comandos
 root_bot/features/
   welcome.py              # Bienvenida de miembros
   rules.py                # Comando /reglas
+  about.py                # Comando /servidor y enlace a tickets
 assets/                   # Imagenes opcionales para embeds
 ```
 
@@ -39,9 +40,12 @@ DISCORD_TOKEN="pega_aqui_el_token"
 DISCORD_GUILD_ID="id_de_tu_servidor"
 WELCOME_CHANNEL_ID="id_del_canal_de_bienvenida"
 RULES_EMBED_COLOR=E53935
+ABOUT_EMBED_COLOR=111111
+TICKET_CHANNEL_ID=1509405048629755914
+TICKET_URL="https://discord.com/channels/1267197911498887332/1509405048629755914"
 ```
 
-`DISCORD_GUILD_ID` es recomendado para que `/reglas` aparezca rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
+`DISCORD_GUILD_ID` es recomendado para que los comandos aparezcan rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
 
 ## Comandos
 
@@ -50,6 +54,17 @@ RULES_EMBED_COLOR=E53935
 Publica un embed rojo con reglas generales del servidor.
 
 Solo pueden usarlo personas con permiso **Manage Server**. Puedes ejecutarlo en el canal donde quieres publicar las reglas, o elegir otro canal desde el parametro `canal`.
+
+### `/servidor`
+
+Publica un embed blanco/negro sobre el servidor, tus servicios, proyectos y automatizaciones.
+
+Incluye un boton **Crear ticket** usando:
+
+- `TICKET_CHANNEL_ID`
+- `TICKET_URL`
+
+Solo pueden usarlo personas con permiso **Manage Server**. Puedes ejecutarlo en el canal donde quieres publicarlo, o elegir otro canal desde el parametro `canal`.
 
 ## Bienvenida
 
@@ -97,6 +112,9 @@ DISCORD_TOKEN=tu_token_real
 DISCORD_GUILD_ID=id_de_tu_servidor
 WELCOME_CHANNEL_ID=id_del_canal_de_bienvenida
 RULES_EMBED_COLOR=E53935
+ABOUT_EMBED_COLOR=111111
+TICKET_CHANNEL_ID=1509405048629755914
+TICKET_URL=https://discord.com/channels/1267197911498887332/1509405048629755914
 ```
 
 ## Permisos del bot

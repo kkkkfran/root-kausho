@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 
 from .config import Settings, load_settings
+from .features.about import AboutCog
 from .features.rules import RulesCog
 from .features.welcome import WelcomeCog
 
@@ -25,12 +26,16 @@ class RootBot(commands.Bot):
     async def setup_hook(self) -> None:
         await self.add_cog(WelcomeCog(self, self.settings))
         await self.add_cog(RulesCog(self, self.settings))
+        await self.add_cog(AboutCog(self, self.settings))
 
         if self.settings.guild_id is not None:
             guild = discord.Object(id=self.settings.guild_id)
             self.tree.copy_global_to(guild=guild)
             synced = await self.tree.sync(guild=guild)
             logger.info("Slash commands sincronizados en guild %s: %s", self.settings.guild_id, len(synced))
+            self.tree.clear_commands(guild=None)
+            cleared = await self.tree.sync()
+            logger.info("Slash commands globales limpiados para evitar duplicados: %s", len(cleared))
             return
 
         synced = await self.tree.sync()
