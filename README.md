@@ -23,6 +23,7 @@ assets/                   # Imagenes opcionales para embeds
 - Scope `bot`
 - Scope `applications.commands` para comandos slash
 - Intent **Server Members Intent** activado para la bienvenida
+- Intent **Message Content Intent** activado para transcripts completos de tickets
 
 ## Instalacion
 
@@ -96,6 +97,7 @@ Logs descargables:
 - Solo se guardan tickets aceptados de servicio: `Comprar o cotizar`, `Bot de Discord`, `Pagina web o panel` y `Automatizacion`.
 - No se guardan logs de soporte, ideas o ayuda general.
 - Si el bot no puede guardar el log de un ticket de servicio, no borra el canal para no perder evidencia.
+- Para que el transcript incluya el texto de los mensajes, activa **Message Content Intent** en el Developer Portal.
 
 ## Bienvenida
 
@@ -170,3 +172,7 @@ Permisos recomendados:
 Para la bienvenida, activa:
 
 `Discord Developer Portal -> Applications -> tu app -> Bot -> Privileged Gateway Intents -> Server Members Intent`
+
+Para logs completos de tickets, activa tambien:
+
+`Discord Developer Portal -> Applications -> tu app -> Bot -> Privileged Gateway Intents -> Message Content Intent`
