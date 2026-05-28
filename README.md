@@ -44,6 +44,7 @@ RULES_EMBED_COLOR=E53935
 ABOUT_EMBED_COLOR=111111
 TICKET_CHANNEL_ID=1509405048629755914
 TICKET_CATEGORY_ID=1509407852681367632
+TICKET_LOG_CHANNEL_ID=1509411767250583613
 TICKET_STAFF_ROLE_ID=""
 TICKET_PANEL_EMBED_COLOR=111111
 TICKET_TERMS_EMBED_COLOR=111111
@@ -88,6 +89,13 @@ El panel muestra un selector con motivos:
 Cuando una persona selecciona una opcion, el bot crea un canal privado dentro de `TICKET_CATEGORY_ID`. Antes de continuar, la persona debe aceptar los terminos de uso del servicio. Si rechaza, el ticket se cierra automaticamente.
 
 Si configuras `TICKET_STAFF_ROLE_ID`, ese rol tambien podra ver y responder tickets. Si lo dejas vacio, solo el usuario, el bot y quienes tengan permisos administrativos podran acceder.
+
+Logs descargables:
+
+- Se envian a `TICKET_LOG_CHANNEL_ID`.
+- Solo se guardan tickets aceptados de servicio: `Comprar o cotizar`, `Bot de Discord`, `Pagina web o panel` y `Automatizacion`.
+- No se guardan logs de soporte, ideas o ayuda general.
+- Si el bot no puede guardar el log de un ticket de servicio, no borra el canal para no perder evidencia.
 
 ## Bienvenida
 
@@ -138,6 +146,7 @@ RULES_EMBED_COLOR=E53935
 ABOUT_EMBED_COLOR=111111
 TICKET_CHANNEL_ID=1509405048629755914
 TICKET_CATEGORY_ID=1509407852681367632
+TICKET_LOG_CHANNEL_ID=1509411767250583613
 TICKET_STAFF_ROLE_ID=
 TICKET_PANEL_EMBED_COLOR=111111
 TICKET_TERMS_EMBED_COLOR=111111
@@ -156,6 +165,7 @@ Permisos recomendados:
 - Read Message History
 - Manage Channels
 - Manage Messages
+- Attach Files
 
 Para la bienvenida, activa:
 

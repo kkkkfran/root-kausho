@@ -4,6 +4,7 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Optional
 
 import discord
@@ -35,6 +36,7 @@ TICKET_OPTIONS = (
 )
 OPTION_BY_KEY = {option.key: option for option in TICKET_OPTIONS}
 CHANNEL_SAFE = re.compile(r"[^a-z0-9-]+")
+SERVICE_TICKET_TYPES = {"compra", "bot", "web", "automatizacion"}
 
 
 TERMS_TEXT = (
@@ -79,6 +81,10 @@ def parse_topic(topic: str | None) -> dict[str, str]:
         data[key.strip()] = value.strip()
 
     return data
+
+
+def should_log_ticket(topic_data: dict[str, str]) -> bool:
+    return topic_data.get("ticket_type") in SERVICE_TICKET_TYPES and topic_data.get("terms") == "accepted"
 
 
 def user_can_manage_ticket(interaction: discord.Interaction, owner_id: int | None) -> bool:
@@ -171,6 +177,25 @@ async def get_ticket_category(guild: discord.Guild, settings: Settings) -> disco
     return category
 
 
+async def get_ticket_log_channel(guild: discord.Guild, settings: Settings) -> discord.TextChannel | None:
+    if settings.ticket_log_channel_id is None:
+        return None
+
+    channel = guild.get_channel(settings.ticket_log_channel_id)
+    if channel is None:
+        try:
+            channel = await guild.fetch_channel(settings.ticket_log_channel_id)
+        except discord.DiscordException as exc:
+            logger.warning("No pude encontrar TICKET_LOG_CHANNEL_ID=%s: %s", settings.ticket_log_channel_id, exc)
+            return None
+
+    if not isinstance(channel, discord.TextChannel):
+        logger.warning("TICKET_LOG_CHANNEL_ID=%s no es un canal de texto.", settings.ticket_log_channel_id)
+        return None
+
+    return channel
+
+
 async def find_open_ticket(
     guild: discord.Guild,
     settings: Settings,
@@ -186,6 +211,116 @@ async def find_open_ticket(
             return channel
 
     return None
+
+
+def format_message_for_transcript(message: discord.Message) -> str:
+    created_at = message.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+    author = f"{message.author} ({message.author.id})"
+    parts = [
+        f"[{created_at}] {author}",
+        f"Jump: {message.jump_url}",
+    ]
+
+    if message.content:
+        parts.append(message.content)
+
+    for attachment in message.attachments:
+        parts.append(f"Attachment: {attachment.filename} | {attachment.url}")
+
+    for embed in message.embeds:
+        if embed.title:
+            parts.append(f"Embed title: {embed.title}")
+        if embed.description:
+            parts.append(f"Embed description: {embed.description}")
+        for field in embed.fields:
+            parts.append(f"Embed field - {field.name}: {field.value}")
+
+    if len(parts) == 2:
+        parts.append("[Mensaje sin texto visible]")
+
+    return "\n".join(parts)
+
+
+async def build_ticket_transcript_file(
+    channel: discord.TextChannel,
+    topic_data: dict[str, str],
+) -> tuple[discord.File, int]:
+    lines = [
+        "TRANSCRIPT DE TICKET",
+        "=" * 80,
+        f"Servidor: {channel.guild.name} ({channel.guild.id})",
+        f"Canal: #{channel.name} ({channel.id})",
+        f"Categoria: {channel.category.name if channel.category else 'Sin categoria'}",
+        f"Topic: {channel.topic or 'Sin topic'}",
+        f"Owner ID: {topic_data.get('ticket_owner', 'desconocido')}",
+        f"Tipo: {topic_data.get('ticket_type', 'desconocido')}",
+        f"Terminos: {topic_data.get('terms', 'desconocido')}",
+        f"Creado: {channel.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"Generado: {discord.utils.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        "=" * 80,
+        "",
+    ]
+
+    message_count = 0
+    async for message in channel.history(limit=None, oldest_first=True):
+        message_count += 1
+        lines.append(format_message_for_transcript(message))
+        lines.append("-" * 80)
+
+    transcript = "\n".join(lines)
+    buffer = BytesIO(transcript.encode("utf-8"))
+    filename = f"ticket-log-{channel.name}-{channel.id}.txt"
+    return discord.File(buffer, filename=filename), message_count
+
+
+def build_ticket_log_embed(
+    channel: discord.TextChannel,
+    topic_data: dict[str, str],
+    closed_by: discord.abc.User,
+    message_count: int,
+) -> discord.Embed:
+    option = OPTION_BY_KEY.get(topic_data.get("ticket_type", "general"), OPTION_BY_KEY["general"])
+    owner_id = topic_data.get("ticket_owner", "desconocido")
+    embed = discord.Embed(
+        title="Log de ticket de servicio",
+        description="Transcript generado automaticamente antes de cerrar el ticket.",
+        color=discord.Color.from_rgb(255, 255, 255),
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.add_field(name="Ticket", value=f"#{channel.name}\n`{channel.id}`", inline=True)
+    embed.add_field(name="Cliente", value=f"<@{owner_id}>\n`{owner_id}`", inline=True)
+    embed.add_field(name="Tipo", value=f"{option.emoji} {option.label}", inline=True)
+    embed.add_field(name="Cerrado por", value=f"{closed_by.mention}\n`{closed_by.id}`", inline=True)
+    embed.add_field(name="Mensajes", value=str(message_count), inline=True)
+    embed.add_field(name="Terminos", value=topic_data.get("terms", "desconocido"), inline=True)
+    embed.set_footer(text="Guardar este archivo como evidencia en caso de disputa")
+    return embed
+
+
+async def send_ticket_log(
+    channel: discord.TextChannel,
+    settings: Settings,
+    closed_by: discord.abc.User,
+    topic_data: dict[str, str],
+) -> bool:
+    if channel.guild is None:
+        return False
+
+    log_channel = await get_ticket_log_channel(channel.guild, settings)
+    if log_channel is None:
+        return False
+
+    me = channel.guild.me
+    if me is not None:
+        permissions = log_channel.permissions_for(me)
+        if not permissions.view_channel or not permissions.send_messages or not permissions.attach_files or not permissions.embed_links:
+            logger.warning("No tengo permisos suficientes para enviar logs en #%s.", log_channel.name)
+            return False
+
+    transcript_file, message_count = await build_ticket_transcript_file(channel, topic_data)
+    embed = build_ticket_log_embed(channel, topic_data, closed_by, message_count)
+    await log_channel.send(embed=embed, file=transcript_file)
+    return True
 
 
 async def create_ticket_channel(
@@ -330,7 +465,7 @@ class TicketTermsView(discord.ui.View):
 
         await interaction.channel.edit(topic=ticket_topic(owner_id, option.key, accepted=True))
         await interaction.response.edit_message(view=None)
-        await interaction.channel.send(embed=build_ready_embed(interaction.user, option), view=TicketCloseView())
+        await interaction.channel.send(embed=build_ready_embed(interaction.user, option), view=TicketCloseView(self.settings))
 
     @discord.ui.button(
         label="Rechazo",
@@ -357,8 +492,9 @@ class TicketTermsView(discord.ui.View):
 
 
 class TicketCloseView(discord.ui.View):
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
         super().__init__(timeout=None)
+        self.settings = settings
 
     @discord.ui.button(
         label="Cerrar ticket",
@@ -376,8 +512,24 @@ class TicketCloseView(discord.ui.View):
             await interaction.response.send_message("No puedes cerrar este ticket.", ephemeral=True)
             return
 
-        await interaction.response.send_message("Cerrando ticket en 5 segundos...", ephemeral=True)
-        await interaction.channel.send("El ticket sera cerrado en 5 segundos.")
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        await interaction.channel.send(f"Ticket cerrado por {interaction.user.mention}. Se cerrara en 5 segundos.")
+
+        if should_log_ticket(topic_data):
+            try:
+                logged = await send_ticket_log(interaction.channel, self.settings, interaction.user, topic_data)
+            except discord.HTTPException as exc:
+                logger.warning("No pude enviar log del ticket %s: %s", interaction.channel.id, exc)
+                logged = False
+
+            if not logged:
+                await interaction.followup.send(
+                    "No pude guardar el log descargable. No cerre el ticket para no perder evidencia.",
+                    ephemeral=True,
+                )
+                return
+
+        await interaction.followup.send("Ticket cerrado correctamente.", ephemeral=True)
         await asyncio.sleep(5)
         await interaction.channel.delete(reason=f"Ticket cerrado por {interaction.user}")
 

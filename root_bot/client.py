@@ -27,7 +27,7 @@ class RootBot(commands.Bot):
     async def setup_hook(self) -> None:
         self.add_view(TicketPanelView(self.settings))
         self.add_view(TicketTermsView(self.settings))
-        self.add_view(TicketCloseView())
+        self.add_view(TicketCloseView(self.settings))
 
         await self.add_cog(WelcomeCog(self, self.settings))
         await self.add_cog(RulesCog(self, self.settings))
