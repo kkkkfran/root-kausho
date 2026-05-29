@@ -143,6 +143,31 @@ class WelcomeCog(commands.Cog):
 
         return discord.File(file_path, filename=file_path.name)
 
+    async def assign_auto_role(self, member: discord.Member) -> None:
+        if self.settings.welcome_auto_role_id is None:
+            return
+
+        role = member.guild.get_role(self.settings.welcome_auto_role_id)
+        if role is None:
+            logger.warning("No encontre WELCOME_AUTO_ROLE_ID=%s en %s.", self.settings.welcome_auto_role_id, member.guild.name)
+            return
+
+        if role in member.roles:
+            return
+
+        try:
+            await member.add_roles(role, reason="Auto rol de bienvenida")
+        except discord.Forbidden:
+            logger.warning(
+                "No pude dar el rol %s a %s. Revisa Manage Roles y que el rol del bot este por encima.",
+                role.name,
+                member,
+            )
+        except discord.HTTPException as exc:
+            logger.warning("Discord rechazo el auto rol %s para %s: %s", role.name, member, exc)
+        else:
+            logger.info("Auto rol %s asignado a %s.", role.name, member)
+
     def build_welcome_embed(self, member: discord.Member, banner_file: discord.File | None = None) -> discord.Embed:
         links = render_welcome_links(self.settings, member)
         title = format_member_template(
@@ -205,6 +230,8 @@ class WelcomeCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
+        await self.assign_auto_role(member)
+
         channel = await self.resolve_welcome_channel(member.guild)
         if channel is None:
             logger.warning("No encontre canal de bienvenida para %s.", member.guild.name)

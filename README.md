@@ -13,6 +13,7 @@ root_bot/features/
   rules.py                # Comando /reglas
   about.py                # Comando /servidor y enlace a tickets
   tickets.py              # Panel, creacion y cierre de tickets
+  automod.py              # Anti invites, anti links y anti spam
 assets/                   # Imagenes opcionales para embeds
 ```
 
@@ -41,6 +42,7 @@ Edita `.env` en local o usa Railway Variables:
 DISCORD_TOKEN="pega_aqui_el_token"
 DISCORD_GUILD_ID="id_de_tu_servidor"
 WELCOME_CHANNEL_ID="id_del_canal_de_bienvenida"
+WELCOME_AUTO_ROLE_ID=1267198449355460700
 RULES_EMBED_COLOR=E53935
 ABOUT_EMBED_COLOR=111111
 TICKET_CHANNEL_ID=1509405048629755914
@@ -50,6 +52,9 @@ TICKET_STAFF_ROLE_ID=""
 TICKET_PANEL_EMBED_COLOR=111111
 TICKET_TERMS_EMBED_COLOR=111111
 TICKET_URL="https://discord.com/channels/1267197911498887332/1509405048629755914"
+AUTOMOD_ENABLED=true
+AUTOMOD_BLOCK_INVITES=true
+AUTOMOD_BLOCK_LINKS=true
 ```
 
 `DISCORD_GUILD_ID` es recomendado para que los comandos aparezcan rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
@@ -99,6 +104,28 @@ Logs descargables:
 - Si el bot no puede guardar el log de un ticket de servicio, no borra el canal para no perder evidencia.
 - Para que el transcript incluya el texto de los mensajes, activa **Message Content Intent** en el Developer Portal.
 
+### `/automod`
+
+Muestra el estado del sistema anti spam/links o lo activa/desactiva en caliente.
+
+Acciones:
+
+- `estado`
+- `activar`
+- `desactivar`
+
+Variables:
+
+- `AUTOMOD_ENABLED=true` activa el sistema al iniciar el bot
+- `AUTOMOD_BLOCK_INVITES=true` bloquea invitaciones de Discord
+- `AUTOMOD_BLOCK_LINKS=true` bloquea links externos
+- `AUTOMOD_ALLOWED_DOMAINS=github.com,kausho.dev` permite dominios concretos
+- `AUTOMOD_EXEMPT_ROLE_ID=` rol exento opcional
+- `AUTOMOD_SPAM_MAX_MESSAGES=5` cantidad maxima de mensajes
+- `AUTOMOD_SPAM_WINDOW_SECONDS=8` ventana de tiempo para detectar spam
+- `AUTOMOD_TIMEOUT_SECONDS=300` segundos de timeout por spam, invites o links bloqueados
+- `AUTOMOD_WARNING_DELETE_SECONDS=8` segundos antes de borrar el aviso
+
 ## Bienvenida
 
 Variables disponibles:
@@ -121,6 +148,7 @@ Opciones:
 - `WELCOME_THUMBNAIL_URL` imagen pequena; vacio usa avatar del usuario
 - `WELCOME_BANNER_URL` imagen grande por URL
 - `WELCOME_BANNER_FILE=assets/welcome.jpg` imagen subida junto al bot
+- `WELCOME_AUTO_ROLE_ID=1267198449355460700` rol que se asigna automaticamente al entrar
 - `WELCOME_PING_OUTSIDE_EMBED=false` mantiene todo dentro del embed
 - `WELCOME_PING_OUTSIDE_EMBED=true` menciona al usuario fuera del embed
 
@@ -144,6 +172,7 @@ Variables minimas en Railway:
 DISCORD_TOKEN=tu_token_real
 DISCORD_GUILD_ID=id_de_tu_servidor
 WELCOME_CHANNEL_ID=id_del_canal_de_bienvenida
+WELCOME_AUTO_ROLE_ID=1267198449355460700
 RULES_EMBED_COLOR=E53935
 ABOUT_EMBED_COLOR=111111
 TICKET_CHANNEL_ID=1509405048629755914
@@ -153,6 +182,15 @@ TICKET_STAFF_ROLE_ID=
 TICKET_PANEL_EMBED_COLOR=111111
 TICKET_TERMS_EMBED_COLOR=111111
 TICKET_URL=https://discord.com/channels/1267197911498887332/1509405048629755914
+AUTOMOD_ENABLED=true
+AUTOMOD_BLOCK_INVITES=true
+AUTOMOD_BLOCK_LINKS=true
+AUTOMOD_ALLOWED_DOMAINS=
+AUTOMOD_EXEMPT_ROLE_ID=
+AUTOMOD_SPAM_MAX_MESSAGES=5
+AUTOMOD_SPAM_WINDOW_SECONDS=8
+AUTOMOD_TIMEOUT_SECONDS=300
+AUTOMOD_WARNING_DELETE_SECONDS=8
 ```
 
 ## Permisos del bot
@@ -168,6 +206,8 @@ Permisos recomendados:
 - Manage Channels
 - Manage Messages
 - Attach Files
+- Moderate Members
+- Manage Roles
 
 Para la bienvenida, activa:
 
