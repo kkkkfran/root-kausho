@@ -55,6 +55,8 @@ TICKET_URL="https://discord.com/channels/1267197911498887332/1509405048629755914
 AUTOMOD_ENABLED=true
 AUTOMOD_BLOCK_INVITES=true
 AUTOMOD_BLOCK_LINKS=true
+MOD_LOG_CHANNEL_ID=1509748290110095471
+MOD_LOG_EMBED_COLOR=111111
 ```
 
 `DISCORD_GUILD_ID` es recomendado para que los comandos aparezcan rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
@@ -125,6 +127,10 @@ Variables:
 - `AUTOMOD_SPAM_WINDOW_SECONDS=8` ventana de tiempo para detectar spam
 - `AUTOMOD_TIMEOUT_SECONDS=300` segundos de timeout por spam, invites o links bloqueados
 - `AUTOMOD_WARNING_DELETE_SECONDS=8` segundos antes de borrar el aviso
+- `MOD_LOG_CHANNEL_ID=1509748290110095471` canal donde se registran sanciones automaticas
+- `MOD_LOG_EMBED_COLOR=111111` color del embed de sanciones
+
+El log de sanciones registra usuario, canal, accion, razon, duracion del aislamiento y contenido eliminado.
 
 ## Bienvenida
 
@@ -191,6 +197,8 @@ AUTOMOD_SPAM_MAX_MESSAGES=5
 AUTOMOD_SPAM_WINDOW_SECONDS=8
 AUTOMOD_TIMEOUT_SECONDS=300
 AUTOMOD_WARNING_DELETE_SECONDS=8
+MOD_LOG_CHANNEL_ID=1509748290110095471
+MOD_LOG_EMBED_COLOR=111111
 ```
 
 ## Permisos del bot

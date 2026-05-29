@@ -28,6 +28,72 @@ class AutoModCog(commands.Cog):
         self.enabled = settings.automod_enabled
         self.user_messages: dict[tuple[int, int], deque[float]] = defaultdict(deque)
 
+    async def get_mod_log_channel(self, guild: discord.Guild) -> discord.TextChannel | None:
+        if self.settings.mod_log_channel_id is None:
+            return None
+
+        channel = guild.get_channel(self.settings.mod_log_channel_id)
+        if channel is None:
+            try:
+                channel = await guild.fetch_channel(self.settings.mod_log_channel_id)
+            except discord.DiscordException as exc:
+                logger.warning("No pude encontrar MOD_LOG_CHANNEL_ID=%s: %s", self.settings.mod_log_channel_id, exc)
+                return None
+
+        if not isinstance(channel, discord.TextChannel):
+            logger.warning("MOD_LOG_CHANNEL_ID=%s no es un canal de texto.", self.settings.mod_log_channel_id)
+            return None
+
+        return channel
+
+    async def send_mod_log(
+        self,
+        message: discord.Message,
+        *,
+        action: str,
+        reason: str,
+        timeout_applied: bool = False,
+    ) -> None:
+        if message.guild is None:
+            return
+
+        log_channel = await self.get_mod_log_channel(message.guild)
+        if log_channel is None:
+            return
+
+        me = message.guild.me
+        if me is not None:
+            permissions = log_channel.permissions_for(me)
+            if not permissions.view_channel or not permissions.send_messages or not permissions.embed_links:
+                logger.warning("No tengo permisos para enviar mod logs en #%s.", log_channel.name)
+                return
+
+        content = message.content or "[Mensaje sin texto visible]"
+        if len(content) > 900:
+            content = f"{content[:900]}..."
+
+        embed = discord.Embed(
+            title="Registro de sancion automatica",
+            description="AutoMod ejecuto una accion para proteger el servidor.",
+            color=discord.Color(self.settings.mod_log_embed_color),
+            timestamp=discord.utils.utcnow(),
+        )
+        embed.add_field(name="Usuario", value=f"{message.author.mention}\n`{message.author.id}`", inline=True)
+        embed.add_field(name="Canal", value=f"{message.channel.mention}\n`{message.channel.id}`", inline=True)
+        embed.add_field(name="Accion", value=action, inline=True)
+        embed.add_field(name="Razon", value=reason, inline=False)
+        embed.add_field(name="Aislamiento", value=f"{self.settings.automod_timeout_seconds}s" if timeout_applied else "No aplicado", inline=True)
+        embed.add_field(name="Mensaje eliminado", value=content, inline=False)
+        embed.set_footer(text="root@kausho AutoMod")
+
+        if isinstance(message.author, discord.Member):
+            embed.set_thumbnail(url=message.author.display_avatar.url)
+
+        try:
+            await log_channel.send(embed=embed)
+        except discord.HTTPException as exc:
+            logger.warning("No pude enviar mod log: %s", exc)
+
     def is_exempt(self, member: discord.Member) -> bool:
         if member.bot:
             return True
@@ -82,12 +148,12 @@ class AutoModCog(commands.Cog):
         except discord.HTTPException:
             pass
 
-    async def apply_timeout(self, message: discord.Message, reason: str) -> None:
+    async def apply_timeout(self, message: discord.Message, reason: str) -> bool:
         if not isinstance(message.author, discord.Member):
-            return
+            return False
 
         if self.settings.automod_timeout_seconds <= 0:
-            return
+            return False
 
         try:
             await message.author.timeout(
@@ -96,8 +162,12 @@ class AutoModCog(commands.Cog):
             )
         except discord.Forbidden:
             logger.warning("No tengo permisos para aplicar timeout a %s.", message.author)
+            return False
         except discord.HTTPException as exc:
             logger.warning("Discord rechazo el timeout para %s: %s", message.author, exc)
+            return False
+
+        return True
 
     async def delete_message(self, message: discord.Message, reason: str) -> bool:
         try:
@@ -124,19 +194,40 @@ class AutoModCog(commands.Cog):
         if self.has_blocked_invite(content):
             deleted = await self.delete_message(message, "no se permiten invitaciones de Discord ni promociones sin permiso.")
             if deleted:
-                await self.apply_timeout(message, "AutoMod: envio de invitacion Discord bloqueada")
+                reason = "AutoMod: envio de invitacion Discord bloqueada"
+                timeout_applied = await self.apply_timeout(message, reason)
+                await self.send_mod_log(
+                    message,
+                    action="Mensaje eliminado + aislamiento",
+                    reason=reason,
+                    timeout_applied=timeout_applied,
+                )
             return
 
         if self.has_blocked_link(content):
             deleted = await self.delete_message(message, "no se permiten links externos sin autorizacion del staff.")
             if deleted:
-                await self.apply_timeout(message, "AutoMod: envio de link externo bloqueado")
+                reason = "AutoMod: envio de link externo bloqueado"
+                timeout_applied = await self.apply_timeout(message, reason)
+                await self.send_mod_log(
+                    message,
+                    action="Mensaje eliminado + aislamiento",
+                    reason=reason,
+                    timeout_applied=timeout_applied,
+                )
             return
 
         if self.is_spam(message):
             deleted = await self.delete_message(message, "evita spamear mensajes. El sistema puede silenciarte automaticamente.")
             if deleted:
-                await self.apply_timeout(message, "AutoMod: spam de mensajes")
+                reason = "AutoMod: spam de mensajes"
+                timeout_applied = await self.apply_timeout(message, reason)
+                await self.send_mod_log(
+                    message,
+                    action="Mensaje eliminado + aislamiento",
+                    reason=reason,
+                    timeout_applied=timeout_applied,
+                )
 
     @app_commands.command(name="automod", description="Revisa o cambia el estado del sistema anti spam/links.")
     @app_commands.describe(accion="Accion a ejecutar")
