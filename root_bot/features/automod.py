@@ -28,6 +28,11 @@ class AutoModCog(commands.Cog):
         self.enabled = settings.automod_enabled
         self.user_messages: dict[tuple[int, int], deque[float]] = defaultdict(deque)
 
+    def sanitize_logged_content(self, content: str) -> str:
+        content = DISCORD_INVITE_PATTERN.sub("[INVITACION DISCORD OCULTA]", content)
+        content = URL_PATTERN.sub("[LINK OCULTO]", content)
+        return content
+
     async def get_mod_log_channel(self, guild: discord.Guild) -> discord.TextChannel | None:
         if self.settings.mod_log_channel_id is None:
             return None
@@ -68,7 +73,7 @@ class AutoModCog(commands.Cog):
                 logger.warning("No tengo permisos para enviar mod logs en #%s.", log_channel.name)
                 return
 
-        content = message.content or "[Mensaje sin texto visible]"
+        content = self.sanitize_logged_content(message.content or "[Mensaje sin texto visible]")
         if len(content) > 900:
             content = f"{content[:900]}..."
 
