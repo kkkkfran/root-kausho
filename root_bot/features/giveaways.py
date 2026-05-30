@@ -134,7 +134,7 @@ def extract_prize_from_embed(message: discord.Message) -> str:
         return "Premio del sorteo"
 
     for line in embed.description.splitlines():
-        clean = line.strip().removeprefix("#").strip()
+        clean = line.strip().lstrip("#").strip()
         if clean and not clean.lower().startswith(("sorteo ", "reacciona ", "termina ", "finalizo ")):
             return clean[:250]
 
@@ -165,44 +165,60 @@ def winners_value(winners: list[discord.abc.User]) -> str:
     return "\n".join(f"{index}. {winner.mention}" for index, winner in enumerate(winners, start=1))
 
 
-def build_progress_bar(remaining: int, total: int = CLAIM_SECONDS) -> str:
-    clamped = max(0, min(total, remaining))
-    return "[" + ("#" * clamped) + ("-" * (total - clamped)) + "]"
-
-
 def build_giveaway_embed(
     record: GiveawayRecord,
     *,
     guild: discord.Guild,
     color: int,
-    status: str = "Activo",
 ) -> discord.Embed:
     ends_at = int(record.ends_at)
-    is_finished = status.lower() != "activo"
-    if is_finished:
-        body = f"### {record.prize}\nSorteo cerrado"
-    else:
-        body = (
-            f"### {record.prize}\n"
-            f"{record.reaction_emoji} Reacciona para participar\n"
-            f"Organiza <@{record.host_id}>"
-        )
-
     embed = discord.Embed(
-        title=f"{record.gift_emoji} {'Sorteo finalizado' if is_finished else 'Sorteo oficial'}",
-        description=body,
+        title=f"{record.gift_emoji} Sorteo activo",
+        description=(
+            f"## {record.prize}\n"
+            f"{record.reaction_emoji} Reacciona para participar\n\n"
+            f"`Finaliza` <t:{ends_at}:R>\n"
+            f"`Ganadores` {record.winners_count}\n"
+            f"`Reclamo` {CLAIM_SECONDS}s en <#{record.claim_channel_id}>\n"
+            f"`Organiza` <@{record.host_id}>"
+        ),
         color=discord.Color(color),
         timestamp=discord.utils.utcnow(),
     )
-    embed.add_field(name="Finaliza", value=f"<t:{ends_at}:R>\n<t:{ends_at}:F>", inline=True)
-    embed.add_field(name="Ganadores", value=str(record.winners_count), inline=True)
-    embed.add_field(name="Reclamo", value=f"<#{record.claim_channel_id}>\n{CLAIM_SECONDS}s", inline=True)
     if guild.icon is not None:
         embed.set_author(name=guild.name, icon_url=guild.icon.url)
     if guild.icon is not None:
         embed.set_thumbnail(url=guild.icon.url)
 
-    embed.set_footer(text=f"{status} | root@kausho")
+    embed.set_footer(text=f"Reclamo: {CLAIM_SECONDS}s en el canal indicado | root@kausho")
+    return embed
+
+
+def build_finished_embed(
+    record: GiveawayRecord,
+    guild: discord.Guild,
+    winners: list[discord.abc.User],
+    *,
+    color: int,
+) -> discord.Embed:
+    embed = discord.Embed(
+        title=f"{record.gift_emoji} Sorteo finalizado",
+        description=(
+            f"## {record.prize}\n"
+            f"`Ganador`\n{winners_value(winners)}\n\n"
+            f"`Reclamo` <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
+        ),
+        color=discord.Color(color),
+        timestamp=discord.utils.utcnow(),
+    )
+    if guild.icon is not None:
+        embed.set_author(name=guild.name, icon_url=guild.icon.url)
+    if winners:
+        embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
+    elif guild.icon is not None:
+        embed.set_thumbnail(url=guild.icon.url)
+
+    embed.set_footer(text="Finalizado | root@kausho")
     return embed
 
 
@@ -230,18 +246,19 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = f"### {record.prize}\n{winner.mention} reclamo el premio correctamente."
+        description = f"## {record.prize}\n{winner.mention} reclamo el premio correctamente.\n\n## 00:00"
         status = "Reclamado"
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = f"### {record.prize}\n{winner.mention} no menciono al organizador a tiempo."
+        description = f"## {record.prize}\n{winner.mention} no menciono al organizador a tiempo.\n\n## 00:00"
         status = "Perdido"
     else:
         title = f"{record.gift_emoji} Ganador seleccionado"
         description = (
-            f"### {record.prize}\n"
+            f"## {record.prize}\n"
             f"{winner.mention} gano el sorteo.\n\n"
-            f"Menciona a <@{record.host_id}> en <#{record.claim_channel_id}> para reclamar."
+            f"Menciona a <@{record.host_id}> en <#{record.claim_channel_id}> para reclamar.\n\n"
+            f"## 00:{remaining:02d}"
         )
         status = f"{remaining}s restantes"
 
@@ -251,14 +268,7 @@ def build_claim_embed(
     elif lost:
         embed_color = discord.Color.red()
 
-    timer = "`00:00`"
-    progress = build_progress_bar(0)
-    if not claimed and not lost:
-        timer = f"`00:{remaining:02d}`"
-        progress = build_progress_bar(remaining)
-
     embed = discord.Embed(title=title, description=description, color=embed_color, timestamp=discord.utils.utcnow())
-    embed.add_field(name="Tiempo", value=f"{timer}\n`{progress}`", inline=False)
     embed.set_thumbnail(url=get_user_avatar_url(winner))
     embed.set_footer(text=status)
     return embed
@@ -273,13 +283,14 @@ def build_reroll_embed(
     title = f"{record.gift_emoji} Reroll realizado"
     embed = discord.Embed(
         title=title,
-        description=f"### {record.prize}\nNuevo ganador seleccionado.",
+        description=(
+            f"## {record.prize}\n"
+            f"`Nuevo ganador`\n{winners_value(winners)}\n\n"
+            f"`Reclamo` <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
+        ),
         color=discord.Color(color),
         timestamp=discord.utils.utcnow(),
     )
-    embed.add_field(name="Ganador", value=winners_value(winners), inline=False)
-    embed.add_field(name="Reclamo", value=f"<#{record.claim_channel_id}> · {CLAIM_SECONDS}s", inline=True)
-    embed.add_field(name="Organiza", value=f"<@{record.host_id}>", inline=True)
     if winners:
         embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
     embed.set_footer(text="Reroll oficial | root@kausho")
@@ -438,13 +449,12 @@ class GiveawayCog(commands.Cog):
         winners = self.pick_winners(participants, record.winners_count)
         record.ended_at = discord.utils.utcnow().timestamp()
         record.winner_ids = [winner.id for winner in winners]
-        ended_embed = build_giveaway_embed(
+        ended_embed = build_finished_embed(
             record,
-            guild=guild,
+            guild,
+            winners,
             color=self.settings.giveaway_embed_color,
-            status="Finalizado",
         )
-        ended_embed.add_field(name="Ganador", value=winners_value(winners), inline=False)
         await message.edit(content=None, embed=ended_embed)
 
         self.records[key] = record
