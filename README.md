@@ -14,6 +14,7 @@ root_bot/features/
   about.py                # Comando /servidor y enlace a tickets
   tickets.py              # Panel, creacion y cierre de tickets
   automod.py              # Anti invites, anti links y anti spam
+  giveaways.py            # Sorteos con reaccion y reclamo temporizado
 assets/                   # Imagenes opcionales para embeds
 ```
 
@@ -57,6 +58,9 @@ AUTOMOD_BLOCK_INVITES=true
 AUTOMOD_BLOCK_LINKS=true
 MOD_LOG_CHANNEL_ID=1509748290110095471
 MOD_LOG_EMBED_COLOR=111111
+GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822
+GIVEAWAY_EMBED_COLOR=111111
+GIVEAWAY_DATA_FILE="data/giveaways.json"
 ```
 
 `DISCORD_GUILD_ID` es recomendado para que los comandos aparezcan rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
@@ -132,6 +136,30 @@ Variables:
 
 El log de sanciones registra usuario, canal, accion, razon, duracion del aislamiento y contenido eliminado.
 
+### `/sorteo iniciar`
+
+Crea un sorteo con embed negro/blanco, mencion oculta `||@everyone||` y reaccion para participar.
+
+Parametros:
+
+- `premio`: lo que se sortea
+- `duracion_minutos`: cuanto dura el sorteo
+- `ganadores`: cantidad de ganadores
+- `canal`: canal opcional donde publicarlo
+
+El bot busca estos emojis personalizados en el servidor:
+
+- `:gift_1:` para decorar el embed
+- `:react_gift:` para participar
+
+Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Cuando termina el sorteo, el ganador tiene 10 segundos para mencionar al organizador en `GIVEAWAY_CLAIM_CHANNEL_ID`. Si no lo hace, el embed se edita marcando la recompensa como perdida.
+
+Variables:
+
+- `GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822` canal donde el ganador debe reclamar
+- `GIVEAWAY_EMBED_COLOR=111111` color del embed del sorteo
+- `GIVEAWAY_DATA_FILE=data/giveaways.json` archivo local para recordar sorteos activos si el bot se reinicia
+
 ## Bienvenida
 
 Variables disponibles:
@@ -199,6 +227,9 @@ AUTOMOD_TIMEOUT_SECONDS=300
 AUTOMOD_WARNING_DELETE_SECONDS=8
 MOD_LOG_CHANNEL_ID=1509748290110095471
 MOD_LOG_EMBED_COLOR=111111
+GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822
+GIVEAWAY_EMBED_COLOR=111111
+GIVEAWAY_DATA_FILE=data/giveaways.json
 ```
 
 ## Permisos del bot
@@ -216,6 +247,8 @@ Permisos recomendados:
 - Attach Files
 - Moderate Members
 - Manage Roles
+- Add Reactions
+- Mention Everyone
 
 Para la bienvenida, activa:
 

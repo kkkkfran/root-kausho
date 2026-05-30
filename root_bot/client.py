@@ -8,6 +8,7 @@ from discord.ext import commands
 from .config import Settings, load_settings
 from .features.about import AboutCog
 from .features.automod import AutoModCog
+from .features.giveaways import GiveawayCog
 from .features.rules import RulesCog
 from .features.tickets import TicketCloseView, TicketCog, TicketPanelView, TicketTermsView
 from .features.welcome import WelcomeCog
@@ -36,6 +37,7 @@ class RootBot(commands.Bot):
         await self.add_cog(AboutCog(self, self.settings))
         await self.add_cog(TicketCog(self, self.settings))
         await self.add_cog(AutoModCog(self, self.settings))
+        await self.add_cog(GiveawayCog(self, self.settings))
 
         if self.settings.guild_id is not None:
             guild = discord.Object(id=self.settings.guild_id)

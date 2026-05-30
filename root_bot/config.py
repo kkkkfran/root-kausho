@@ -29,6 +29,7 @@ DEFAULT_TICKET_CATEGORY_ID = 1509407852681367632
 DEFAULT_TICKET_LOG_CHANNEL_ID = 1509411767250583613
 DEFAULT_TICKET_URL = "https://discord.com/channels/1267197911498887332/1509405048629755914"
 DEFAULT_MOD_LOG_CHANNEL_ID = 1509748290110095471
+DEFAULT_GIVEAWAY_CLAIM_CHANNEL_ID = 1507802013851717822
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,9 @@ class Settings:
     automod_warning_delete_seconds: int
     mod_log_channel_id: int | None
     mod_log_embed_color: int
+    giveaway_claim_channel_id: int | None
+    giveaway_embed_color: int
+    giveaway_data_file: str
     bot_status: str
     log_level: str
 
@@ -169,6 +173,9 @@ def load_settings() -> Settings:
         automod_warning_delete_seconds=parse_int("AUTOMOD_WARNING_DELETE_SECONDS", 8),
         mod_log_channel_id=parse_optional_int("MOD_LOG_CHANNEL_ID") or DEFAULT_MOD_LOG_CHANNEL_ID,
         mod_log_embed_color=parse_hex_color("MOD_LOG_EMBED_COLOR", "111111"),
+        giveaway_claim_channel_id=parse_optional_int("GIVEAWAY_CLAIM_CHANNEL_ID") or DEFAULT_GIVEAWAY_CLAIM_CHANNEL_ID,
+        giveaway_embed_color=parse_hex_color("GIVEAWAY_EMBED_COLOR", "111111"),
+        giveaway_data_file=os.getenv("GIVEAWAY_DATA_FILE", "data/giveaways.json").strip() or "data/giveaways.json",
         bot_status=os.getenv("BOT_STATUS", "dando la bienvenida"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
     )
