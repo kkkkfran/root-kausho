@@ -204,9 +204,9 @@ def build_finished_embed(
     embed = discord.Embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
         description=(
-            f"## {record.prize}\n"
-            f"`Ganador`\n{winners_value(winners)}\n\n"
-            f"`Reclamo` <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
+            f"**Premio:** `{record.prize}`\n"
+            f"**Ganador:**\n{winners_value(winners)}\n\n"
+            f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
@@ -225,7 +225,7 @@ def build_finished_embed(
 def build_no_winner_embed(record: GiveawayRecord, guild: discord.Guild, *, color: int) -> discord.Embed:
     embed = discord.Embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
-        description=f"### {record.prize}\nNo hubo participantes validos.",
+        description=f"**Premio:** `{record.prize}`\nNo hubo participantes validos.",
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
     )
@@ -246,16 +246,27 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = f"**{record.prize}**\n{winner.mention} reclamo correctamente.\n`00:00`"
+        description = (
+            f"**Premio:** `{record.prize}`\n"
+            f"**Ganador:** {winner.mention}\n"
+            f"Reclamo correctamente.\n\n"
+            f"## `00:00`"
+        )
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = f"**{record.prize}**\n{winner.mention} no reclamo a tiempo.\n`00:00`"
+        description = (
+            f"**Premio:** `{record.prize}`\n"
+            f"**Ganador:** {winner.mention}\n"
+            f"No reclamo a tiempo.\n\n"
+            f"## `00:00`"
+        )
     else:
         title = f"{record.gift_emoji} Ganador seleccionado"
         description = (
-            f"**{record.prize}**\n"
-            f"{winner.mention} gano. Reclama en <#{record.claim_channel_id}> mencionando a <@{record.host_id}>.\n"
-            f"`00:{remaining:02d}`"
+            f"**Premio:** `{record.prize}`\n"
+            f"**Ganador:** {winner.mention}\n"
+            f"**Reclamo:** <#{record.claim_channel_id}> mencionando a <@{record.host_id}>\n\n"
+            f"## `00:{remaining:02d}`"
         )
 
     embed = discord.Embed(
@@ -278,7 +289,7 @@ def build_reroll_embed(
         title=title,
         description=(
             f"**Premio:** `{record.prize}`\n"
-            f"**Nuevo ganador:** {winners_value(winners)}\n"
+            f"**Nuevo ganador:**\n{winners_value(winners)}\n\n"
             f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
