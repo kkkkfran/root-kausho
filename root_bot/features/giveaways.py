@@ -249,24 +249,24 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"Reclamo correctamente.\n"
-            f"### `00:00`"
+            f"### `00:00`\n"
+            f"Reclamo correctamente."
         )
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"No reclamo a tiempo.\n"
-            f"### `00:00`"
+            f"### `00:00`\n"
+            f"No reclamo a tiempo."
         )
     else:
         title = f"{record.gift_emoji} Ganador seleccionado"
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> mencionando a <@{record.host_id}>\n"
-            f"### `00:{remaining:02d}`"
+            f"### `00:{remaining:02d}`\n"
+            f"**Reclamo:** <#{record.claim_channel_id}> mencionando a <@{record.host_id}>"
         )
 
     embed = discord.Embed(
