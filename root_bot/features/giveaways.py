@@ -242,22 +242,31 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = f"**{record.prize}**\n{winner.mention} reclamo correctamente."
+        description = (
+            f"**{record.prize}**\n"
+            f"{winner.mention} reclamo correctamente.\n\n"
+            f"### `00:00`"
+        )
         info_name = "Estado"
         info_value = "Reclamado"
-        timer = "### `00:00`"
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = f"**{record.prize}**\n{winner.mention} no reclamo a tiempo."
+        description = (
+            f"**{record.prize}**\n"
+            f"{winner.mention} no reclamo a tiempo.\n\n"
+            f"### `00:00`"
+        )
         info_name = "Estado"
         info_value = "Perdido"
-        timer = "### `00:00`"
     else:
         title = f"{record.gift_emoji} Ganador seleccionado"
-        description = f"**{record.prize}**\n{winner.mention} gano el sorteo."
+        description = (
+            f"**{record.prize}**\n"
+            f"{winner.mention} gano el sorteo.\n\n"
+            f"### `00:{remaining:02d}`"
+        )
         info_name = "Reclamo"
         info_value = f"<#{record.claim_channel_id}>\nMenciona a <@{record.host_id}>"
-        timer = f"### `00:{remaining:02d}`"
 
     embed = discord.Embed(
         title=title,
@@ -265,7 +274,6 @@ def build_claim_embed(
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
     embed.add_field(name=info_name, value=info_value, inline=True)
-    embed.add_field(name="Tiempo", value=timer, inline=True)
     embed.set_thumbnail(url=get_user_avatar_url(winner))
     return embed
 
