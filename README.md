@@ -143,7 +143,7 @@ Crea un sorteo con embed negro/blanco, mencion oculta `||@everyone||` y reaccion
 Parametros:
 
 - `premio`: lo que se sortea
-- `duracion_minutos`: cuanto dura el sorteo
+- `duracion`: cuanto dura el sorteo usando abreviaciones, por ejemplo `1h`, `3h`, `1d`, `2h 30m` o `1y`
 - `ganadores`: cantidad de ganadores
 - `canal`: canal opcional donde publicarlo
 

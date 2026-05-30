@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Optional
@@ -19,6 +20,22 @@ logger = logging.getLogger("root-bot.giveaways")
 FALLBACK_GIFT_EMOJI = "\U0001F381"
 DEFAULT_REACTION_EMOJI = "\U0001F381"
 CLAIM_SECONDS = 10
+MIN_GIVEAWAY_SECONDS = 10
+MAX_GIVEAWAY_SECONDS = 365 * 24 * 60 * 60
+DURATION_PATTERN = re.compile(r"(\d+)\s*(sem|seg|sec|min|s|m|h|d|w|y|a)", re.IGNORECASE)
+DURATION_UNITS = {
+    "seg": 1,
+    "sec": 1,
+    "s": 1,
+    "min": 60,
+    "m": 60,
+    "h": 60 * 60,
+    "d": 24 * 60 * 60,
+    "w": 7 * 24 * 60 * 60,
+    "sem": 7 * 24 * 60 * 60,
+    "y": 365 * 24 * 60 * 60,
+    "a": 365 * 24 * 60 * 60,
+}
 
 
 @dataclass
@@ -36,15 +53,58 @@ class GiveawayRecord:
 
 
 def format_duration(seconds: int) -> str:
-    if seconds < 60:
-        return f"{seconds}s"
-    if seconds < 3600:
-        minutes, rest = divmod(seconds, 60)
-        return f"{minutes}m {rest}s" if rest else f"{minutes}m"
+    remaining = seconds
+    years, remaining = divmod(remaining, 365 * 24 * 60 * 60)
+    weeks, remaining = divmod(remaining, 7 * 24 * 60 * 60)
+    days, remaining = divmod(remaining, 24 * 60 * 60)
+    hours, remaining = divmod(remaining, 60 * 60)
+    minutes, seconds = divmod(remaining, 60)
+    parts: list[str] = []
+    for value, suffix in (
+        (years, "y"),
+        (weeks, "w"),
+        (days, "d"),
+        (hours, "h"),
+        (minutes, "m"),
+        (seconds, "s"),
+    ):
+        if value:
+            parts.append(f"{value}{suffix}")
 
-    hours, rest = divmod(seconds, 3600)
-    minutes = rest // 60
-    return f"{hours}h {minutes}m" if minutes else f"{hours}h"
+    return " ".join(parts) if parts else "0s"
+
+
+def parse_duration(value: str) -> int:
+    normalized = value.strip().lower().replace(",", " ")
+    if not normalized:
+        raise ValueError("Escribe una duracion, por ejemplo `1h`, `1d` o `2h 30m`.")
+
+    total_seconds = 0
+    position = 0
+    found = False
+    for match in DURATION_PATTERN.finditer(normalized):
+        if normalized[position : match.start()].strip():
+            raise ValueError("Formato invalido. Usa ejemplos como `1h`, `1d`, `2h 30m` o `1y`.")
+
+        amount = int(match.group(1))
+        unit = match.group(2).lower()
+        if amount <= 0:
+            raise ValueError("La duracion debe ser mayor a cero.")
+
+        total_seconds += amount * DURATION_UNITS[unit]
+        position = match.end()
+        found = True
+
+    if not found or normalized[position:].strip():
+        raise ValueError("Formato invalido. Usa ejemplos como `1h`, `1d`, `2h 30m` o `1y`.")
+
+    if total_seconds < MIN_GIVEAWAY_SECONDS:
+        raise ValueError(f"La duracion minima es `{format_duration(MIN_GIVEAWAY_SECONDS)}`.")
+
+    if total_seconds > MAX_GIVEAWAY_SECONDS:
+        raise ValueError(f"La duracion maxima es `{format_duration(MAX_GIVEAWAY_SECONDS)}`.")
+
+    return total_seconds
 
 
 def resolve_named_emoji(guild: discord.Guild, name: str, fallback: str) -> str:
@@ -68,29 +128,31 @@ def build_giveaway_embed(
     status: str = "Activo",
 ) -> discord.Embed:
     ends_at = int(record.ends_at)
-    host_mention = f"<@{record.host_id}>"
+    is_finished = status.lower() != "activo"
+    if is_finished:
+        body = f"## {record.prize}\nSorteo cerrado\n\nFinalizo <t:{ends_at}:R>"
+    else:
+        body = (
+            f"## {record.prize}\n"
+            f"{record.reaction_emoji} Reacciona para participar\n\n"
+            f"Termina <t:{ends_at}:R>"
+        )
+
     embed = discord.Embed(
-        title=f"{record.gift_emoji} Sorteo oficial",
-        description=(
-            f"**Premio**\n{record.prize}\n\n"
-            f"{record.reaction_emoji} Reacciona en este mensaje para participar.\n"
-            f"El ganador tendra **{CLAIM_SECONDS}s** para reclamar su premio."
-        ),
+        title=f"{record.gift_emoji} {'Sorteo finalizado' if is_finished else 'Nuevo sorteo'}",
+        description=body,
         color=discord.Color(color),
         timestamp=discord.utils.utcnow(),
     )
-    embed.add_field(name="Estado", value=status, inline=True)
     embed.add_field(name="Ganadores", value=str(record.winners_count), inline=True)
-    embed.add_field(name="Organizador", value=host_mention, inline=True)
-    embed.add_field(name="Finaliza", value=f"<t:{ends_at}:R>\n<t:{ends_at}:F>", inline=True)
-    embed.add_field(name="Reclamo", value=f"Mencionar al organizador en <#{record.claim_channel_id}>.", inline=True)
-    embed.add_field(name="Validacion", value="El bot ignora reacciones de bots.", inline=True)
+    embed.add_field(name="Reclamo", value=f"{CLAIM_SECONDS}s en <#{record.claim_channel_id}>", inline=True)
+    embed.add_field(name="Organiza", value=f"<@{record.host_id}>", inline=True)
     if guild.icon is not None:
         embed.set_author(name=guild.name, icon_url=guild.icon.url)
     if guild.icon is not None:
         embed.set_thumbnail(url=guild.icon.url)
 
-    embed.set_footer(text="root@kausho | Sorteo oficial")
+    embed.set_footer(text=f"{status} | root@kausho")
     return embed
 
 
@@ -118,17 +180,17 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = f"{winner.mention} reclamo el premio correctamente."
+        description = f"{winner.mention} reclamo **{record.prize}** correctamente."
         status = "Reclamado"
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = f"{winner.mention} no menciono al organizador a tiempo y perdio la recompensa."
+        description = f"{winner.mention} no menciono al organizador a tiempo."
         status = "Perdido"
     else:
-        title = f"{record.gift_emoji} Ganador seleccionado"
+        title = f"{record.gift_emoji} Tenemos ganador"
         description = (
-            f"Felicidades {winner.mention}, ganaste **{record.prize}**.\n\n"
-            f"Debes mencionar a <@{record.host_id}> en <#{record.claim_channel_id}> para reclamar."
+            f"{winner.mention} gano **{record.prize}**.\n\n"
+            f"Menciona a <@{record.host_id}> en <#{record.claim_channel_id}> para reclamar."
         )
         status = f"{remaining}s restantes"
 
@@ -145,10 +207,8 @@ def build_claim_embed(
         progress = build_progress_bar(remaining)
 
     embed = discord.Embed(title=title, description=description, color=embed_color, timestamp=discord.utils.utcnow())
-    embed.add_field(name="Temporizador", value=f"{timer}\n`{progress}`", inline=True)
-    embed.add_field(name="Estado", value=status, inline=True)
-    embed.add_field(name="Canal de reclamo", value=f"<#{record.claim_channel_id}>", inline=True)
-    embed.set_footer(text="El reclamo debe hacerse dentro del tiempo indicado")
+    embed.add_field(name="Tiempo", value=f"{timer}\n`{progress}`", inline=False)
+    embed.set_footer(text=status)
     return embed
 
 
@@ -366,7 +426,7 @@ class GiveawayCog(commands.Cog):
     @giveaway.command(name="iniciar", description="Inicia un sorteo con reaccion para participar.")
     @app_commands.describe(
         premio="Premio del sorteo",
-        duracion_minutos="Duracion del sorteo en minutos",
+        duracion="Duracion abreviada: 1h, 1d, 2h 30m, 1y",
         ganadores="Cantidad de ganadores",
         canal="Canal donde publicar el sorteo",
     )
@@ -377,7 +437,7 @@ class GiveawayCog(commands.Cog):
         self,
         interaction: discord.Interaction,
         premio: str,
-        duracion_minutos: app_commands.Range[int, 1, 10080],
+        duracion: str,
         ganadores: app_commands.Range[int, 1, 10] = 1,
         canal: Optional[discord.TextChannel] = None,
     ) -> None:
@@ -392,6 +452,12 @@ class GiveawayCog(commands.Cog):
 
         if len(premio) > 250:
             await interaction.response.send_message("El premio no puede superar 250 caracteres.", ephemeral=True)
+            return
+
+        try:
+            duration_seconds = parse_duration(duracion)
+        except ValueError as exc:
+            await interaction.response.send_message(str(exc), ephemeral=True)
             return
 
         me = interaction.guild.me
@@ -415,7 +481,7 @@ class GiveawayCog(commands.Cog):
 
         gift_emoji = resolve_named_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
         reaction_emoji = resolve_named_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
-        ends_at = discord.utils.utcnow().timestamp() + duracion_minutos * 60
+        ends_at = discord.utils.utcnow().timestamp() + duration_seconds
         claim_channel_id = self.settings.giveaway_claim_channel_id or target.id
         record = GiveawayRecord(
             guild_id=interaction.guild.id,
@@ -459,7 +525,7 @@ class GiveawayCog(commands.Cog):
         self.schedule_giveaway(key, record)
 
         await interaction.followup.send(
-            f"Sorteo creado en {target.mention}. Termina en {format_duration(duracion_minutos * 60)}.",
+            f"Sorteo creado en {target.mention}. Termina en {format_duration(duration_seconds)}.",
             ephemeral=True,
         )
 
