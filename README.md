@@ -154,6 +154,20 @@ El bot busca estos emojis personalizados en el servidor:
 
 Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Cuando termina el sorteo, el ganador tiene 10 segundos para mencionar al organizador en `GIVEAWAY_CLAIM_CHANNEL_ID`. Si no lo hace, el embed se edita marcando la recompensa como perdida.
 
+El embed del ganador muestra su avatar como miniatura y mantiene el temporizador visible mientras reclama.
+
+### `/sorteo reroll`
+
+Elige un nuevo ganador desde un sorteo ya finalizado.
+
+Parametros:
+
+- `mensaje_id`: ID o enlace del mensaje original del sorteo
+- `ganadores`: cantidad de nuevos ganadores
+- `canal`: canal donde esta el mensaje, si no ejecutas el comando en el mismo canal
+
+El reroll ignora al ultimo ganador registrado para intentar elegir una persona nueva. Publica un embed separado, limpio, con avatar del nuevo ganador y vuelve a iniciar el reclamo de 10 segundos.
+
 Variables:
 
 - `GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822` canal donde el ganador debe reclamar

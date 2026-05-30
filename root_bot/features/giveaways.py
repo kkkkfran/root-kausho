@@ -5,7 +5,7 @@ import json
 import logging
 import random
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -50,6 +50,8 @@ class GiveawayRecord:
     reaction_emoji: str
     gift_emoji: str
     claim_channel_id: int
+    ended_at: float | None = None
+    winner_ids: list[int] = field(default_factory=list)
 
 
 def format_duration(seconds: int) -> str:
@@ -107,12 +109,60 @@ def parse_duration(value: str) -> int:
     return total_seconds
 
 
+def parse_message_id(value: str) -> int | None:
+    matches = re.findall(r"\d{17,20}", value)
+    if not matches:
+        return None
+
+    return int(matches[-1])
+
+
 def resolve_named_emoji(guild: discord.Guild, name: str, fallback: str) -> str:
     emoji = discord.utils.get(guild.emojis, name=name)
     if emoji is None:
         return fallback
 
     return str(emoji)
+
+
+def extract_prize_from_embed(message: discord.Message) -> str:
+    if not message.embeds:
+        return "Premio del sorteo"
+
+    embed = message.embeds[0]
+    if not embed.description:
+        return "Premio del sorteo"
+
+    for line in embed.description.splitlines():
+        clean = line.strip().removeprefix("#").strip()
+        if clean and not clean.lower().startswith(("sorteo ", "reacciona ", "termina ", "finalizo ")):
+            return clean[:250]
+
+    return "Premio del sorteo"
+
+
+def extract_mentioned_ids(value: str) -> list[int]:
+    return [int(match) for match in re.findall(r"<@!?(\d+)>", value)]
+
+
+def extract_winner_ids_from_embed(message: discord.Message) -> list[int]:
+    if not message.embeds:
+        return []
+
+    winner_ids: list[int] = []
+    for field_item in message.embeds[0].fields:
+        if "ganador" in field_item.name.lower():
+            winner_ids.extend(extract_mentioned_ids(field_item.value))
+
+    return winner_ids
+
+
+def get_user_avatar_url(user: discord.abc.User) -> str:
+    return user.display_avatar.url
+
+
+def winners_value(winners: list[discord.abc.User]) -> str:
+    return "\n".join(f"{index}. {winner.mention}" for index, winner in enumerate(winners, start=1))
 
 
 def build_progress_bar(remaining: int, total: int = CLAIM_SECONDS) -> str:
@@ -130,23 +180,23 @@ def build_giveaway_embed(
     ends_at = int(record.ends_at)
     is_finished = status.lower() != "activo"
     if is_finished:
-        body = f"## {record.prize}\nSorteo cerrado\n\nFinalizo <t:{ends_at}:R>"
+        body = f"### {record.prize}\nSorteo cerrado"
     else:
         body = (
-            f"## {record.prize}\n"
-            f"{record.reaction_emoji} Reacciona para participar\n\n"
-            f"Termina <t:{ends_at}:R>"
+            f"### {record.prize}\n"
+            f"{record.reaction_emoji} Reacciona para participar\n"
+            f"Organiza <@{record.host_id}>"
         )
 
     embed = discord.Embed(
-        title=f"{record.gift_emoji} {'Sorteo finalizado' if is_finished else 'Nuevo sorteo'}",
+        title=f"{record.gift_emoji} {'Sorteo finalizado' if is_finished else 'Sorteo oficial'}",
         description=body,
         color=discord.Color(color),
         timestamp=discord.utils.utcnow(),
     )
+    embed.add_field(name="Finaliza", value=f"<t:{ends_at}:R>\n<t:{ends_at}:F>", inline=True)
     embed.add_field(name="Ganadores", value=str(record.winners_count), inline=True)
-    embed.add_field(name="Reclamo", value=f"{CLAIM_SECONDS}s en <#{record.claim_channel_id}>", inline=True)
-    embed.add_field(name="Organiza", value=f"<@{record.host_id}>", inline=True)
+    embed.add_field(name="Reclamo", value=f"<#{record.claim_channel_id}>\n{CLAIM_SECONDS}s", inline=True)
     if guild.icon is not None:
         embed.set_author(name=guild.name, icon_url=guild.icon.url)
     if guild.icon is not None:
@@ -159,7 +209,7 @@ def build_giveaway_embed(
 def build_no_winner_embed(record: GiveawayRecord, guild: discord.Guild, *, color: int) -> discord.Embed:
     embed = discord.Embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
-        description=f"El sorteo de **{record.prize}** termino sin participantes validos.",
+        description=f"### {record.prize}\nNo hubo participantes validos.",
         color=discord.Color(color),
         timestamp=discord.utils.utcnow(),
     )
@@ -180,16 +230,17 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = f"{winner.mention} reclamo **{record.prize}** correctamente."
+        description = f"### {record.prize}\n{winner.mention} reclamo el premio correctamente."
         status = "Reclamado"
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = f"{winner.mention} no menciono al organizador a tiempo."
+        description = f"### {record.prize}\n{winner.mention} no menciono al organizador a tiempo."
         status = "Perdido"
     else:
-        title = f"{record.gift_emoji} Tenemos ganador"
+        title = f"{record.gift_emoji} Ganador seleccionado"
         description = (
-            f"{winner.mention} gano **{record.prize}**.\n\n"
+            f"### {record.prize}\n"
+            f"{winner.mention} gano el sorteo.\n\n"
             f"Menciona a <@{record.host_id}> en <#{record.claim_channel_id}> para reclamar."
         )
         status = f"{remaining}s restantes"
@@ -208,7 +259,30 @@ def build_claim_embed(
 
     embed = discord.Embed(title=title, description=description, color=embed_color, timestamp=discord.utils.utcnow())
     embed.add_field(name="Tiempo", value=f"{timer}\n`{progress}`", inline=False)
+    embed.set_thumbnail(url=get_user_avatar_url(winner))
     embed.set_footer(text=status)
+    return embed
+
+
+def build_reroll_embed(
+    record: GiveawayRecord,
+    winners: list[discord.abc.User],
+    *,
+    color: int,
+) -> discord.Embed:
+    title = f"{record.gift_emoji} Reroll realizado"
+    embed = discord.Embed(
+        title=title,
+        description=f"### {record.prize}\nNuevo ganador seleccionado.",
+        color=discord.Color(color),
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.add_field(name="Ganador", value=winners_value(winners), inline=False)
+    embed.add_field(name="Reclamo", value=f"<#{record.claim_channel_id}> · {CLAIM_SECONDS}s", inline=True)
+    embed.add_field(name="Organiza", value=f"<@{record.host_id}>", inline=True)
+    if winners:
+        embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
+    embed.set_footer(text="Reroll oficial | root@kausho")
     return embed
 
 
@@ -261,9 +335,15 @@ class GiveawayCog(commands.Cog):
     async def resume_giveaways(self) -> None:
         await self.bot.wait_until_ready()
         for key, record in list(self.records.items()):
+            if record.ended_at is not None:
+                continue
+
             self.schedule_giveaway(key, record)
 
     def schedule_giveaway(self, key: str, record: GiveawayRecord) -> None:
+        if record.ended_at is not None:
+            return
+
         old_task = self.tasks.pop(key, None)
         if old_task is not None:
             old_task.cancel()
@@ -274,6 +354,9 @@ class GiveawayCog(commands.Cog):
         self.store.save(self.records)
 
     async def finish_when_ready(self, key: str, record: GiveawayRecord) -> None:
+        if record.ended_at is not None:
+            return
+
         delay = max(0, record.ends_at - discord.utils.utcnow().timestamp())
         await asyncio.sleep(delay)
         await self.finish_giveaway(key, record)
@@ -307,10 +390,11 @@ class GiveawayCog(commands.Cog):
     async def collect_participants(self, message: discord.Message, record: GiveawayRecord) -> list[discord.abc.User]:
         participants: list[discord.abc.User] = []
         seen: set[int] = set()
-        for reaction in message.reactions:
-            if str(reaction.emoji) != record.reaction_emoji:
-                continue
+        reactions = [reaction for reaction in message.reactions if str(reaction.emoji) == record.reaction_emoji]
+        if not reactions:
+            reactions = list(message.reactions)
 
+        for reaction in reactions:
             async for user in reaction.users(limit=None):
                 if user.bot or user.id in seen:
                     continue
@@ -319,6 +403,19 @@ class GiveawayCog(commands.Cog):
                 participants.append(user)
 
         return participants
+
+    def pick_winners(
+        self,
+        participants: list[discord.abc.User],
+        count: int,
+        excluded_ids: set[int] | None = None,
+    ) -> list[discord.abc.User]:
+        excluded_ids = excluded_ids or set()
+        candidates = [participant for participant in participants if participant.id not in excluded_ids]
+        if not candidates:
+            return []
+
+        return random.sample(candidates, k=min(count, len(candidates)))
 
     async def finish_giveaway(self, key: str, record: GiveawayRecord) -> None:
         fetched = await self.fetch_giveaway_message(record)
@@ -330,26 +427,30 @@ class GiveawayCog(commands.Cog):
         guild, channel, message = fetched
         participants = await self.collect_participants(message, record)
         if not participants:
+            record.ended_at = discord.utils.utcnow().timestamp()
+            record.winner_ids = []
             await message.edit(content=None, embed=build_no_winner_embed(record, guild, color=self.settings.giveaway_embed_color))
-            self.records.pop(key, None)
+            self.records[key] = record
+            self.tasks.pop(key, None)
             self.save_records()
             return
 
-        winners = random.sample(participants, k=min(record.winners_count, len(participants)))
-        winner_mentions = ", ".join(winner.mention for winner in winners)
+        winners = self.pick_winners(participants, record.winners_count)
+        record.ended_at = discord.utils.utcnow().timestamp()
+        record.winner_ids = [winner.id for winner in winners]
         ended_embed = build_giveaway_embed(
             record,
             guild=guild,
             color=self.settings.giveaway_embed_color,
             status="Finalizado",
         )
-        ended_embed.add_field(name="Ganador(es)", value=winner_mentions, inline=False)
+        ended_embed.add_field(name="Ganador", value=winners_value(winners), inline=False)
         await message.edit(content=None, embed=ended_embed)
 
-        await asyncio.gather(*(self.run_claim_countdown(channel, record, winner) for winner in winners))
-
-        self.records.pop(key, None)
+        self.records[key] = record
+        self.tasks.pop(key, None)
         self.save_records()
+        await asyncio.gather(*(self.run_claim_countdown(channel, record, winner) for winner in winners))
 
     async def run_claim_countdown(
         self,
@@ -422,6 +523,122 @@ class GiveawayCog(commands.Cog):
                 claimed=True,
             )
         )
+
+    @giveaway.command(name="reroll", description="Elige un nuevo ganador de un sorteo finalizado.")
+    @app_commands.describe(
+        mensaje_id="ID o enlace del mensaje del sorteo",
+        ganadores="Cantidad de nuevos ganadores",
+        canal="Canal donde esta el mensaje del sorteo",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    async def reroll(
+        self,
+        interaction: discord.Interaction,
+        mensaje_id: str,
+        ganadores: app_commands.Range[int, 1, 10] = 1,
+        canal: Optional[discord.TextChannel] = None,
+    ) -> None:
+        if interaction.guild is None:
+            await interaction.response.send_message("Este comando solo funciona dentro de un servidor.", ephemeral=True)
+            return
+
+        parsed_message_id = parse_message_id(mensaje_id)
+        if parsed_message_id is None:
+            await interaction.response.send_message("Pega el ID del mensaje del sorteo o el enlace del mensaje.", ephemeral=True)
+            return
+
+        key = str(parsed_message_id)
+        record = self.records.get(key)
+        if record is not None and record.ended_at is None and record.ends_at > discord.utils.utcnow().timestamp():
+            await interaction.response.send_message("Ese sorteo todavia esta activo. Espera a que termine para hacer reroll.", ephemeral=True)
+            return
+
+        target = canal or interaction.channel
+        if not isinstance(target, discord.TextChannel):
+            await interaction.response.send_message("Usa este comando en un canal de texto normal.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        if record is not None and record.guild_id == interaction.guild.id:
+            fetched = await self.fetch_giveaway_message(record)
+            if fetched is None:
+                await interaction.followup.send("No pude encontrar el mensaje original del sorteo.", ephemeral=True)
+                return
+
+            _, source_channel, message = fetched
+        else:
+            source_channel = target
+            try:
+                message = await source_channel.fetch_message(parsed_message_id)
+            except discord.DiscordException:
+                await interaction.followup.send(
+                    f"No pude encontrar ese mensaje en {source_channel.mention}.",
+                    ephemeral=True,
+                )
+                return
+
+            gift_emoji = resolve_named_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
+            reaction_emoji = resolve_named_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
+            record = GiveawayRecord(
+                guild_id=interaction.guild.id,
+                channel_id=source_channel.id,
+                message_id=message.id,
+                host_id=interaction.user.id,
+                prize=extract_prize_from_embed(message),
+                winners_count=ganadores,
+                ends_at=discord.utils.utcnow().timestamp(),
+                reaction_emoji=reaction_emoji,
+                gift_emoji=gift_emoji,
+                claim_channel_id=self.settings.giveaway_claim_channel_id or source_channel.id,
+                ended_at=discord.utils.utcnow().timestamp(),
+                winner_ids=extract_winner_ids_from_embed(message),
+            )
+
+        me = interaction.guild.me
+        if me is not None:
+            permissions = source_channel.permissions_for(me)
+            required_permissions = {
+                "View Channel": permissions.view_channel,
+                "Send Messages": permissions.send_messages,
+                "Embed Links": permissions.embed_links,
+                "Read Message History": permissions.read_message_history,
+            }
+            missing_permissions = [name for name, has_permission in required_permissions.items() if not has_permission]
+            if missing_permissions:
+                await interaction.followup.send(
+                    f"No tengo permisos para hacer reroll en {source_channel.mention}: {', '.join(missing_permissions)}.",
+                    ephemeral=True,
+                )
+                return
+
+        participants = await self.collect_participants(message, record)
+        previous_winner_ids = set(record.winner_ids)
+        winners = self.pick_winners(participants, ganadores, excluded_ids=previous_winner_ids)
+        if not winners:
+            await interaction.followup.send(
+                "No quedan participantes nuevos para hacer reroll en ese sorteo.",
+                ephemeral=True,
+            )
+            return
+
+        record.winners_count = ganadores
+        record.ended_at = discord.utils.utcnow().timestamp()
+        record.winner_ids = [winner.id for winner in winners]
+        self.records[key] = record
+        self.save_records()
+
+        await source_channel.send(
+            embed=build_reroll_embed(record, winners, color=self.settings.giveaway_embed_color),
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+        await interaction.followup.send(
+            f"Reroll publicado en {source_channel.mention}.",
+            ephemeral=True,
+        )
+        await asyncio.gather(*(self.run_claim_countdown(source_channel, record, winner) for winner in winners))
 
     @giveaway.command(name="iniciar", description="Inicia un sorteo con reaccion para participar.")
     @app_commands.describe(
