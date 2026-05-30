@@ -176,8 +176,7 @@ def build_giveaway_embed(
     embed = discord.Embed(
         title=f"{record.gift_emoji} Nuevo sorteo activo!",
         description=(
-            f"**Nuevo sorteo**\n\n"
-            f"**Premio:** `{record.prize}`\n\n"
+            f"**Premio:** `{record.prize}`\n"
             f"Reacciona con {record.reaction_emoji} para participar.\n\n"
             f"**Termina:** <t:{ends_at}:R>\n"
             f"**Ganadores:** `{record.winners_count}`\n"
@@ -284,9 +283,9 @@ def build_reroll_embed(
     embed = discord.Embed(
         title=title,
         description=(
-            f"## {record.prize}\n"
-            f"`Nuevo ganador`\n{winners_value(winners)}\n\n"
-            f"`Reclamo` <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
+            f"**Premio:** `{record.prize}`\n"
+            f"**Nuevo ganador:** {winners_value(winners)}\n"
+            f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
@@ -469,14 +468,13 @@ class GiveawayCog(commands.Cog):
         winner: discord.abc.User,
     ) -> None:
         claim_message = await source_channel.send(
-            content=winner.mention,
             embed=build_claim_embed(
                 record,
                 winner,
                 color=self.settings.giveaway_embed_color,
                 remaining=CLAIM_SECONDS,
             ),
-            allowed_mentions=discord.AllowedMentions(users=True),
+            allowed_mentions=discord.AllowedMentions.none(),
         )
 
         claim_channel = source_channel.guild.get_channel(record.claim_channel_id)
