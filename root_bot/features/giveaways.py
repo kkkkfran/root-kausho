@@ -205,20 +205,16 @@ def build_finished_embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
         description=(
             f"**Premio:** `{record.prize}`\n"
-            f"**Ganador:**\n{winners_value(winners)}\n\n"
+            f"**Ganador:** {winners_value(winners)}\n"
             f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
-        timestamp=discord.utils.utcnow(),
     )
-    if guild.icon is not None:
-        embed.set_author(name=guild.name, icon_url=guild.icon.url)
     if winners:
         embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
     elif guild.icon is not None:
         embed.set_thumbnail(url=guild.icon.url)
 
-    embed.set_footer(text="Finalizado | root@kausho")
     return embed
 
 
@@ -227,11 +223,9 @@ def build_no_winner_embed(record: GiveawayRecord, guild: discord.Guild, *, color
         title=f"{record.gift_emoji} Sorteo finalizado",
         description=f"**Premio:** `{record.prize}`\nNo hubo participantes validos.",
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
-        timestamp=discord.utils.utcnow(),
     )
     if guild.icon is not None:
         embed.set_thumbnail(url=guild.icon.url)
-    embed.set_footer(text="No hubo ganador")
     return embed
 
 
@@ -249,7 +243,7 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"Reclamo correctamente.\n"
+            f"**Estado:** Reclamado\n"
             f"### `00:00`"
         )
     elif lost:
@@ -257,7 +251,7 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"No reclamo a tiempo.\n"
+            f"**Estado:** No reclamo a tiempo\n"
             f"### `00:00`"
         )
     else:
@@ -265,7 +259,8 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> mencionando a <@{record.host_id}>\n"
+            f"**Canal:** <#{record.claim_channel_id}>\n"
+            f"**Menciona:** <@{record.host_id}>\n"
             f"### `00:{remaining:02d}`"
         )
 
@@ -289,15 +284,13 @@ def build_reroll_embed(
         title=title,
         description=(
             f"**Premio:** `{record.prize}`\n"
-            f"**Nuevo ganador:**\n{winners_value(winners)}\n\n"
+            f"**Nuevo ganador:** {winners_value(winners)}\n"
             f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
-        timestamp=discord.utils.utcnow(),
     )
     if winners:
         embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
-    embed.set_footer(text="Reroll oficial | root@kausho")
     return embed
 
 
