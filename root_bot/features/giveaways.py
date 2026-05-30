@@ -163,6 +163,9 @@ def get_user_avatar_url(user: discord.abc.User) -> str:
 
 
 def winners_value(winners: list[discord.abc.User]) -> str:
+    if len(winners) == 1:
+        return winners[0].mention
+
     return "\n".join(f"{index}. {winner.mention}" for index, winner in enumerate(winners, start=1))
 
 
@@ -203,13 +206,11 @@ def build_finished_embed(
 ) -> discord.Embed:
     embed = discord.Embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
-        description=(
-            f"**Premio:** `{record.prize}`\n"
-            f"**Ganador:** {winners_value(winners)}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
-        ),
+        description=f"**{record.prize}**",
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
+    embed.add_field(name="Ganador", value=winners_value(winners), inline=True)
+    embed.add_field(name="Reclamo", value=f"<#{record.claim_channel_id}>\n{CLAIM_SECONDS}s", inline=True)
     if winners:
         embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
     elif guild.icon is not None:
@@ -221,9 +222,10 @@ def build_finished_embed(
 def build_no_winner_embed(record: GiveawayRecord, guild: discord.Guild, *, color: int) -> discord.Embed:
     embed = discord.Embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
-        description=f"**Premio:** `{record.prize}`\nNo hubo participantes validos.",
+        description=f"**{record.prize}**",
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
+    embed.add_field(name="Resultado", value="No hubo participantes validos.", inline=False)
     if guild.icon is not None:
         embed.set_thumbnail(url=guild.icon.url)
     return embed
@@ -240,35 +242,30 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = (
-            f"**Premio:** `{record.prize}`\n"
-            f"**Ganador:** {winner.mention}\n"
-            f"**Estado:** Reclamado\n"
-            f"### `00:00`"
-        )
+        description = f"**{record.prize}**\n{winner.mention} reclamo correctamente."
+        info_name = "Estado"
+        info_value = "Reclamado"
+        timer = "### `00:00`"
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = (
-            f"**Premio:** `{record.prize}`\n"
-            f"**Ganador:** {winner.mention}\n"
-            f"**Estado:** No reclamo a tiempo\n"
-            f"### `00:00`"
-        )
+        description = f"**{record.prize}**\n{winner.mention} no reclamo a tiempo."
+        info_name = "Estado"
+        info_value = "Perdido"
+        timer = "### `00:00`"
     else:
         title = f"{record.gift_emoji} Ganador seleccionado"
-        description = (
-            f"**Premio:** `{record.prize}`\n"
-            f"**Ganador:** {winner.mention}\n"
-            f"**Canal:** <#{record.claim_channel_id}>\n"
-            f"**Menciona:** <@{record.host_id}>\n"
-            f"### `00:{remaining:02d}`"
-        )
+        description = f"**{record.prize}**\n{winner.mention} gano el sorteo."
+        info_name = "Reclamo"
+        info_value = f"<#{record.claim_channel_id}>\nMenciona a <@{record.host_id}>"
+        timer = f"### `00:{remaining:02d}`"
 
     embed = discord.Embed(
         title=title,
         description=description,
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
+    embed.add_field(name=info_name, value=info_value, inline=True)
+    embed.add_field(name="Tiempo", value=timer, inline=True)
     embed.set_thumbnail(url=get_user_avatar_url(winner))
     return embed
 
@@ -282,13 +279,11 @@ def build_reroll_embed(
     title = f"{record.gift_emoji} Reroll realizado"
     embed = discord.Embed(
         title=title,
-        description=(
-            f"**Premio:** `{record.prize}`\n"
-            f"**Nuevo ganador:** {winners_value(winners)}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
-        ),
+        description=f"**{record.prize}**",
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
+    embed.add_field(name="Nuevo ganador", value=winners_value(winners), inline=True)
+    embed.add_field(name="Reclamo", value=f"<#{record.claim_channel_id}>\n{CLAIM_SECONDS}s", inline=True)
     if winners:
         embed.set_thumbnail(url=get_user_avatar_url(winners[0]))
     return embed
