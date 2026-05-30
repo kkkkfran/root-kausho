@@ -22,8 +22,7 @@ DEFAULT_REACTION_EMOJI = "\U0001F381"
 CLAIM_SECONDS = 10
 MIN_GIVEAWAY_SECONDS = 10
 MAX_GIVEAWAY_SECONDS = 365 * 24 * 60 * 60
-CLAIM_COLOR_LIGHT = 238
-CLAIM_COLOR_DARK = 36
+GIVEAWAY_EMBED_COLOR = 0xFFFFFF
 DURATION_PATTERN = re.compile(r"(\d+)\s*(sem|seg|sec|min|s|m|h|d|w|y|a)", re.IGNORECASE)
 DURATION_UNITS = {
     "seg": 1,
@@ -163,17 +162,6 @@ def get_user_avatar_url(user: discord.abc.User) -> str:
     return user.display_avatar.url
 
 
-def grayscale_color(shade: int) -> discord.Color:
-    clamped = max(0, min(255, shade))
-    return discord.Color.from_rgb(clamped, clamped, clamped)
-
-
-def claim_countdown_color(remaining: int) -> discord.Color:
-    progress = max(0, min(CLAIM_SECONDS, remaining)) / CLAIM_SECONDS
-    shade = int(CLAIM_COLOR_DARK + (CLAIM_COLOR_LIGHT - CLAIM_COLOR_DARK) * progress)
-    return grayscale_color(shade)
-
-
 def winners_value(winners: list[discord.abc.User]) -> str:
     return "\n".join(f"{index}. {winner.mention}" for index, winner in enumerate(winners, start=1))
 
@@ -186,16 +174,16 @@ def build_giveaway_embed(
 ) -> discord.Embed:
     ends_at = int(record.ends_at)
     embed = discord.Embed(
-        title=f"{record.gift_emoji} Sorteo activo",
+        title=f"{record.gift_emoji} Nuevo sorteo activo!",
         description=(
-            f"## {record.prize}\n"
-            f"{record.reaction_emoji} Reacciona para participar\n\n"
-            f"`Finaliza` <t:{ends_at}:R>\n"
-            f"`Ganadores` {record.winners_count}\n"
-            f"`Reclamo` {CLAIM_SECONDS}s en <#{record.claim_channel_id}>\n"
-            f"`Organiza` <@{record.host_id}>"
+            f"**Nuevo sorteo**\n\n"
+            f"**Premio:** `{record.prize}`\n\n"
+            f"Reacciona con {record.reaction_emoji} para participar.\n\n"
+            f"**Termina:** <t:{ends_at}:R>\n"
+            f"**Ganadores:** `{record.winners_count}`\n"
+            f"Organizado por <@{record.host_id}>"
         ),
-        color=discord.Color(color),
+        color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
     )
     if guild.icon is not None:
@@ -203,7 +191,7 @@ def build_giveaway_embed(
     if guild.icon is not None:
         embed.set_thumbnail(url=guild.icon.url)
 
-    embed.set_footer(text=f"Reclamo: {CLAIM_SECONDS}s en el canal indicado | root@kausho")
+    embed.set_footer(text=f"Reclamo: {CLAIM_SECONDS}s en el canal indicado")
     return embed
 
 
@@ -221,7 +209,7 @@ def build_finished_embed(
             f"`Ganador`\n{winners_value(winners)}\n\n"
             f"`Reclamo` <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
-        color=discord.Color(color),
+        color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
     )
     if guild.icon is not None:
@@ -239,7 +227,7 @@ def build_no_winner_embed(record: GiveawayRecord, guild: discord.Guild, *, color
     embed = discord.Embed(
         title=f"{record.gift_emoji} Sorteo finalizado",
         description=f"### {record.prize}\nNo hubo participantes validos.",
-        color=discord.Color(color),
+        color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
     )
     if guild.icon is not None:
@@ -275,14 +263,12 @@ def build_claim_embed(
         )
         status = f"{remaining}s restantes"
 
-    if claimed:
-        embed_color = grayscale_color(CLAIM_COLOR_LIGHT)
-    elif lost:
-        embed_color = grayscale_color(CLAIM_COLOR_DARK)
-    else:
-        embed_color = claim_countdown_color(remaining)
-
-    embed = discord.Embed(title=title, description=description, color=embed_color, timestamp=discord.utils.utcnow())
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=discord.Color(GIVEAWAY_EMBED_COLOR),
+        timestamp=discord.utils.utcnow(),
+    )
     embed.set_thumbnail(url=get_user_avatar_url(winner))
     embed.set_footer(text=status)
     return embed
@@ -302,7 +288,7 @@ def build_reroll_embed(
             f"`Nuevo ganador`\n{winners_value(winners)}\n\n"
             f"`Reclamo` <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
         ),
-        color=discord.Color(color),
+        color=discord.Color(GIVEAWAY_EMBED_COLOR),
         timestamp=discord.utils.utcnow(),
     )
     if winners:

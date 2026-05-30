@@ -174,7 +174,7 @@ def load_settings() -> Settings:
         mod_log_channel_id=parse_optional_int("MOD_LOG_CHANNEL_ID") or DEFAULT_MOD_LOG_CHANNEL_ID,
         mod_log_embed_color=parse_hex_color("MOD_LOG_EMBED_COLOR", "111111"),
         giveaway_claim_channel_id=parse_optional_int("GIVEAWAY_CLAIM_CHANNEL_ID") or DEFAULT_GIVEAWAY_CLAIM_CHANNEL_ID,
-        giveaway_embed_color=parse_hex_color("GIVEAWAY_EMBED_COLOR", "111111"),
+        giveaway_embed_color=parse_hex_color("GIVEAWAY_EMBED_COLOR", "FFFFFF"),
         giveaway_data_file=os.getenv("GIVEAWAY_DATA_FILE", "data/giveaways.json").strip() or "data/giveaways.json",
         bot_status=os.getenv("BOT_STATUS", "dando la bienvenida"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
