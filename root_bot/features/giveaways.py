@@ -249,7 +249,7 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"Reclamo correctamente.\n\n"
+            f"Reclamo correctamente.\n"
             f"### `00:00`"
         )
     elif lost:
@@ -257,7 +257,7 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"No reclamo a tiempo.\n\n"
+            f"No reclamo a tiempo.\n"
             f"### `00:00`"
         )
     else:
@@ -265,7 +265,7 @@ def build_claim_embed(
         description = (
             f"**Premio:** `{record.prize}`\n"
             f"**Ganador:** {winner.mention}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> mencionando a <@{record.host_id}>\n\n"
+            f"**Reclamo:** <#{record.claim_channel_id}> mencionando a <@{record.host_id}>\n"
             f"### `00:{remaining:02d}`"
         )
 
