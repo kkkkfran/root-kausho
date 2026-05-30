@@ -246,30 +246,24 @@ def build_claim_embed(
 ) -> discord.Embed:
     if claimed:
         title = f"{record.gift_emoji} Premio reclamado"
-        description = f"## {record.prize}\n{winner.mention} reclamo el premio correctamente.\n\n## 00:00"
-        status = "Reclamado"
+        description = f"**{record.prize}**\n{winner.mention} reclamo correctamente.\n`00:00`"
     elif lost:
         title = f"{record.gift_emoji} Recompensa perdida"
-        description = f"## {record.prize}\n{winner.mention} no menciono al organizador a tiempo.\n\n## 00:00"
-        status = "Perdido"
+        description = f"**{record.prize}**\n{winner.mention} no reclamo a tiempo.\n`00:00`"
     else:
         title = f"{record.gift_emoji} Ganador seleccionado"
         description = (
-            f"## {record.prize}\n"
-            f"{winner.mention} gano el sorteo.\n\n"
-            f"Menciona a <@{record.host_id}> en <#{record.claim_channel_id}> para reclamar.\n\n"
-            f"## 00:{remaining:02d}"
+            f"**{record.prize}**\n"
+            f"{winner.mention} gano. Reclama en <#{record.claim_channel_id}> mencionando a <@{record.host_id}>.\n"
+            f"`00:{remaining:02d}`"
         )
-        status = f"{remaining}s restantes"
 
     embed = discord.Embed(
         title=title,
         description=description,
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
-        timestamp=discord.utils.utcnow(),
     )
     embed.set_thumbnail(url=get_user_avatar_url(winner))
-    embed.set_footer(text=status)
     return embed
 
 
