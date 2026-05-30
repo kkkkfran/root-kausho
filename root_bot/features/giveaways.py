@@ -197,6 +197,32 @@ def build_giveaway_embed(
     return embed
 
 
+def build_giveaway_announce_embed(
+    record: GiveawayRecord,
+    *,
+    guild: discord.Guild,
+) -> discord.Embed:
+    ends_at = int(record.ends_at)
+    embed = discord.Embed(
+        title=f"{record.gift_emoji} Nuevo sorteo activo!",
+        description=(
+            f"**Premio:** `{record.prize}`\n"
+            f"Hay un sorteo activo en **{guild.name}**.\n\n"
+            f"**Termina:** <t:{ends_at}:R>\n"
+            f"**Ganadores:** `{record.winners_count}`\n"
+            "Entra al servidor oficial para participar."
+        ),
+        color=discord.Color(GIVEAWAY_EMBED_COLOR),
+        timestamp=discord.utils.utcnow(),
+    )
+    if guild.icon is not None:
+        embed.set_author(name=guild.name, icon_url=guild.icon.url)
+        embed.set_thumbnail(url=guild.icon.url)
+
+    embed.set_footer(text="Aviso externo | participa desde el servidor oficial")
+    return embed
+
+
 def build_finished_embed(
     record: GiveawayRecord,
     guild: discord.Guild,
@@ -531,6 +557,45 @@ class GiveawayCog(commands.Cog):
             )
         )
 
+    async def send_external_announcement(self, record: GiveawayRecord, guild: discord.Guild) -> bool:
+        channel_id = self.settings.giveaway_announce_channel_id
+        invite_url = self.settings.giveaway_invite_url
+        if channel_id is None or not invite_url:
+            return False
+
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            try:
+                channel = await self.bot.fetch_channel(channel_id)
+            except discord.DiscordException as exc:
+                logger.warning("No pude encontrar canal externo de sorteos %s: %s", channel_id, exc)
+                return False
+
+        if not isinstance(channel, discord.TextChannel):
+            logger.warning("El canal externo de sorteos %s no es un canal de texto.", channel_id)
+            return False
+
+        me = channel.guild.me
+        if me is not None:
+            permissions = channel.permissions_for(me)
+            if not permissions.view_channel or not permissions.send_messages or not permissions.embed_links:
+                logger.warning("No tengo permisos para anunciar sorteos en %s.", channel_id)
+                return False
+
+        view = discord.ui.View(timeout=None)
+        view.add_item(discord.ui.Button(label="Entrar y participar", emoji=FALLBACK_GIFT_EMOJI, url=invite_url))
+        try:
+            await channel.send(
+                embed=build_giveaway_announce_embed(record, guild=guild),
+                view=view,
+                allowed_mentions=discord.AllowedMentions.none(),
+            )
+        except discord.DiscordException as exc:
+            logger.warning("No pude enviar aviso externo de sorteo en %s: %s", channel_id, exc)
+            return False
+
+        return True
+
     @giveaway.command(name="reroll", description="Elige un nuevo ganador de un sorteo finalizado.")
     @app_commands.describe(
         mensaje_id="ID o enlace del mensaje del sorteo",
@@ -747,9 +812,12 @@ class GiveawayCog(commands.Cog):
         self.records[key] = record
         self.save_records()
         self.schedule_giveaway(key, record)
+        external_sent = await self.send_external_announcement(record, interaction.guild)
+
+        extra = " Aviso externo enviado." if external_sent else " No pude enviar el aviso externo."
 
         await interaction.followup.send(
-            f"Sorteo creado en {target.mention}. Termina en {format_duration(duration_seconds)}.",
+            f"Sorteo creado en {target.mention}. Termina en {format_duration(duration_seconds)}.{extra}",
             ephemeral=True,
         )
 

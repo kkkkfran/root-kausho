@@ -59,6 +59,8 @@ AUTOMOD_BLOCK_LINKS=true
 MOD_LOG_CHANNEL_ID=1509748290110095471
 MOD_LOG_EMBED_COLOR=111111
 GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822
+GIVEAWAY_ANNOUNCE_CHANNEL_ID=1499069695956090911
+GIVEAWAY_INVITE_URL="https://discord.gg/GcxEyxxzcm"
 GIVEAWAY_EMBED_COLOR=FFFFFF
 GIVEAWAY_DATA_FILE="data/giveaways.json"
 ```
@@ -156,6 +158,8 @@ Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Cuando te
 
 El embed del ganador muestra su avatar como miniatura y mantiene el temporizador visible mientras reclama.
 
+Tambien envia un aviso externo a `GIVEAWAY_ANNOUNCE_CHANNEL_ID` con un boton de invitacion. Ese aviso no tiene reaccion y no permite participar desde el otro servidor; solo manda a la persona al servidor oficial.
+
 ### `/sorteo reroll`
 
 Elige un nuevo ganador desde un sorteo ya finalizado.
@@ -171,6 +175,8 @@ El reroll ignora al ultimo ganador registrado para intentar elegir una persona n
 Variables:
 
 - `GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822` canal donde el ganador debe reclamar
+- `GIVEAWAY_ANNOUNCE_CHANNEL_ID=1499069695956090911` canal externo donde se anuncia el sorteo
+- `GIVEAWAY_INVITE_URL=https://discord.gg/GcxEyxxzcm` invitacion del servidor oficial para el boton
 - `GIVEAWAY_EMBED_COLOR=FFFFFF` color del embed del sorteo
 - `GIVEAWAY_DATA_FILE=data/giveaways.json` archivo local para recordar sorteos activos si el bot se reinicia
 
@@ -242,6 +248,8 @@ AUTOMOD_WARNING_DELETE_SECONDS=8
 MOD_LOG_CHANNEL_ID=1509748290110095471
 MOD_LOG_EMBED_COLOR=111111
 GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822
+GIVEAWAY_ANNOUNCE_CHANNEL_ID=1499069695956090911
+GIVEAWAY_INVITE_URL=https://discord.gg/GcxEyxxzcm
 GIVEAWAY_EMBED_COLOR=FFFFFF
 GIVEAWAY_DATA_FILE=data/giveaways.json
 ```
