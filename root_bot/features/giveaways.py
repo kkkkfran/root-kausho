@@ -209,7 +209,7 @@ def build_finished_embed(
         description=(
             f"**{record.prize}**\n"
             f"**Ganador:** {winners_value(winners)}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
+            f"**Reclamo:** <#{record.claim_channel_id}>"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
@@ -286,7 +286,7 @@ def build_reroll_embed(
         description=(
             f"**{record.prize}**\n"
             f"**Nuevo ganador:** {winners_value(winners)}\n"
-            f"**Reclamo:** <#{record.claim_channel_id}> - {CLAIM_SECONDS}s"
+            f"**Reclamo:** <#{record.claim_channel_id}>"
         ),
         color=discord.Color(GIVEAWAY_EMBED_COLOR),
     )
