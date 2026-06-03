@@ -64,7 +64,7 @@ GIVEAWAY_EMBED_COLOR=FFFFFF
 GIVEAWAY_DATA_FILE="data/giveaways.json"
 ```
 
-Los comandos slash se sincronizan globalmente para que el owner pueda usarlos en cualquier servidor donde este el bot. `BOT_OWNER_ID` define el unico usuario autorizado a ejecutar comandos.
+Los comandos slash se sincronizan globalmente para que el owner pueda usarlos en cualquier servidor donde este el bot. `BOT_OWNER_ID` define el unico usuario autorizado a ejecutar comandos. `DISCORD_GUILD_ID` se usa como servidor oficial para tomar emojis personalizados del sorteo.
 
 ## Comandos
 
@@ -149,12 +149,14 @@ Parametros:
 - `canal`: canal opcional donde publicarlo
 - `canal_reclamo_id`: ID, mencion o enlace del canal donde el ganador debe mencionarte; si lo dejas vacio usa `GIVEAWAY_CLAIM_CHANNEL_ID`
 
-El bot busca estos emojis personalizados en el servidor:
+El bot busca estos emojis personalizados primero en el servidor oficial configurado en `DISCORD_GUILD_ID`, y si no los encuentra usa los del servidor donde creaste el sorteo:
 
 - `:gift_1:` para decorar el embed
 - `:react_gift:` para participar
 
-Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Cuando termina el sorteo, el ganador tiene 10 segundos para mencionar al organizador en el canal de reclamo elegido. Si no lo hace, el embed se edita marcando la recompensa como perdida.
+Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Para usar emojis del servidor oficial en otro servidor, el bot debe estar en ambos servidores y tener permiso **Use External Emojis** en el canal del sorteo.
+
+Cuando termina el sorteo, el ganador tiene 10 segundos para mencionar al organizador en el canal de reclamo elegido. Si no lo hace, el embed se edita marcando la recompensa como perdida.
 
 El embed del ganador muestra su avatar como miniatura y mantiene el temporizador visible mientras reclama.
 
@@ -267,6 +269,7 @@ Permisos recomendados:
 - Manage Roles
 - Add Reactions
 - Mention Everyone
+- Use External Emojis
 
 Para la bienvenida, activa:
 

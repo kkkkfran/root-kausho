@@ -118,14 +118,6 @@ def parse_message_id(value: str) -> int | None:
     return int(matches[-1])
 
 
-def resolve_named_emoji(guild: discord.Guild, name: str, fallback: str) -> str:
-    emoji = discord.utils.get(guild.emojis, name=name)
-    if emoji is None:
-        return fallback
-
-    return str(emoji)
-
-
 def extract_prize_from_embed(message: discord.Message) -> str:
     if not message.embeds:
         return "Premio del sorteo"
@@ -363,6 +355,23 @@ class GiveawayCog(commands.Cog):
 
     def save_records(self) -> None:
         self.store.save(self.records)
+
+    def resolve_giveaway_emoji(self, guild: discord.Guild, name: str, fallback: str) -> str:
+        guilds: list[discord.Guild] = []
+        if self.settings.guild_id is not None:
+            official_guild = self.bot.get_guild(self.settings.guild_id)
+            if official_guild is not None:
+                guilds.append(official_guild)
+
+        if all(candidate.id != guild.id for candidate in guilds):
+            guilds.append(guild)
+
+        for candidate in guilds:
+            emoji = discord.utils.get(candidate.emojis, name=name)
+            if emoji is not None:
+                return str(emoji)
+
+        return fallback
 
     async def resolve_claim_channel_id(
         self,
@@ -617,8 +626,8 @@ class GiveawayCog(commands.Cog):
                 )
                 return
 
-            gift_emoji = resolve_named_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
-            reaction_emoji = resolve_named_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
+            gift_emoji = self.resolve_giveaway_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
+            reaction_emoji = self.resolve_giveaway_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
             record = GiveawayRecord(
                 guild_id=interaction.guild.id,
                 channel_id=source_channel.id,
@@ -733,8 +742,8 @@ class GiveawayCog(commands.Cog):
                 )
                 return
 
-        gift_emoji = resolve_named_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
-        reaction_emoji = resolve_named_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
+        gift_emoji = self.resolve_giveaway_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
+        reaction_emoji = self.resolve_giveaway_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
         ends_at = discord.utils.utcnow().timestamp() + duration_seconds
         fallback_claim_channel_id = self.settings.giveaway_claim_channel_id or target.id
         try:
