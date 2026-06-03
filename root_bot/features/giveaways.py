@@ -169,6 +169,10 @@ def winners_value(winners: list[discord.abc.User]) -> str:
     return "\n".join(f"{index}. {winner.mention}" for index, winner in enumerate(winners, start=1))
 
 
+def winner_ping_allowed_mentions() -> discord.AllowedMentions:
+    return discord.AllowedMentions(everyone=False, users=True, roles=False, replied_user=False)
+
+
 def build_giveaway_embed(
     record: GiveawayRecord,
     *,
@@ -494,13 +498,14 @@ class GiveawayCog(commands.Cog):
         winner: discord.abc.User,
     ) -> None:
         claim_message = await source_channel.send(
+            content=winner.mention,
             embed=build_claim_embed(
                 record,
                 winner,
                 color=self.settings.giveaway_embed_color,
                 remaining=CLAIM_SECONDS,
             ),
-            allowed_mentions=discord.AllowedMentions.none(),
+            allowed_mentions=winner_ping_allowed_mentions(),
         )
 
         claim_channel = source_channel.guild.get_channel(record.claim_channel_id)
