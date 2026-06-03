@@ -197,32 +197,6 @@ def build_giveaway_embed(
     return embed
 
 
-def build_giveaway_announce_embed(
-    record: GiveawayRecord,
-    *,
-    guild: discord.Guild,
-) -> discord.Embed:
-    ends_at = int(record.ends_at)
-    embed = discord.Embed(
-        title=f"{record.gift_emoji} Nuevo sorteo activo!",
-        description=(
-            f"**Premio:** `{record.prize}`\n"
-            f"Hay un sorteo activo en **{guild.name}**.\n\n"
-            f"**Termina:** <t:{ends_at}:R>\n"
-            f"**Ganadores:** `{record.winners_count}`\n"
-            "Entra al servidor oficial para participar."
-        ),
-        color=discord.Color(GIVEAWAY_EMBED_COLOR),
-        timestamp=discord.utils.utcnow(),
-    )
-    if guild.icon is not None:
-        embed.set_author(name=guild.name, icon_url=guild.icon.url)
-        embed.set_thumbnail(url=guild.icon.url)
-
-    embed.set_footer(text="Aviso externo | participa desde el servidor oficial")
-    return embed
-
-
 def build_finished_embed(
     record: GiveawayRecord,
     guild: discord.Guild,
@@ -351,8 +325,6 @@ class GiveawayStore:
 
 
 class GiveawayCog(commands.Cog):
-    giveaway = app_commands.Group(name="sorteo", description="Sistema de sorteos del servidor.")
-
     def __init__(self, bot: commands.Bot, settings: Settings) -> None:
         self.bot = bot
         self.settings = settings
@@ -387,6 +359,35 @@ class GiveawayCog(commands.Cog):
 
     def save_records(self) -> None:
         self.store.save(self.records)
+
+    async def resolve_claim_channel_id(
+        self,
+        guild: discord.Guild,
+        value: str | None,
+        fallback_channel_id: int,
+    ) -> int:
+        if value is None or value.strip() == "":
+            return fallback_channel_id
+
+        channel_id = parse_message_id(value)
+        if channel_id is None:
+            raise ValueError("El canal de reclamo debe ser un ID, mencion o enlace de canal valido.")
+
+        channel = guild.get_channel(channel_id)
+        if channel is None:
+            try:
+                channel = await guild.fetch_channel(channel_id)
+            except discord.DiscordException as exc:
+                raise ValueError("No pude encontrar ese canal de reclamo en este servidor.") from exc
+
+        if not isinstance(channel, discord.TextChannel):
+            raise ValueError("El canal de reclamo debe ser un canal de texto.")
+
+        me = guild.me
+        if me is not None and not channel.permissions_for(me).view_channel:
+            raise ValueError(f"No puedo ver el canal de reclamo {channel.mention}.")
+
+        return channel.id
 
     async def finish_when_ready(self, key: str, record: GiveawayRecord) -> None:
         if record.ended_at is not None:
@@ -557,53 +558,12 @@ class GiveawayCog(commands.Cog):
             )
         )
 
-    async def send_external_announcement(self, record: GiveawayRecord, guild: discord.Guild) -> bool:
-        channel_id = self.settings.giveaway_announce_channel_id
-        invite_url = self.settings.giveaway_invite_url
-        if channel_id is None or not invite_url:
-            return False
-
-        channel = self.bot.get_channel(channel_id)
-        if channel is None:
-            try:
-                channel = await self.bot.fetch_channel(channel_id)
-            except discord.DiscordException as exc:
-                logger.warning("No pude encontrar canal externo de sorteos %s: %s", channel_id, exc)
-                return False
-
-        if not isinstance(channel, discord.TextChannel):
-            logger.warning("El canal externo de sorteos %s no es un canal de texto.", channel_id)
-            return False
-
-        me = channel.guild.me
-        if me is not None:
-            permissions = channel.permissions_for(me)
-            if not permissions.view_channel or not permissions.send_messages or not permissions.embed_links:
-                logger.warning("No tengo permisos para anunciar sorteos en %s.", channel_id)
-                return False
-
-        view = discord.ui.View(timeout=None)
-        view.add_item(discord.ui.Button(label="Entrar y participar", emoji=FALLBACK_GIFT_EMOJI, url=invite_url))
-        try:
-            await channel.send(
-                embed=build_giveaway_announce_embed(record, guild=guild),
-                view=view,
-                allowed_mentions=discord.AllowedMentions.none(),
-            )
-        except discord.DiscordException as exc:
-            logger.warning("No pude enviar aviso externo de sorteo en %s: %s", channel_id, exc)
-            return False
-
-        return True
-
-    @giveaway.command(name="reroll", description="Elige un nuevo ganador de un sorteo finalizado.")
+    @app_commands.command(name="reroll", description="Elige un nuevo ganador de un sorteo finalizado.")
     @app_commands.describe(
         mensaje_id="ID o enlace del mensaje del sorteo",
         ganadores="Cantidad de nuevos ganadores",
         canal="Canal donde esta el mensaje del sorteo",
     )
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def reroll(
         self,
@@ -712,15 +672,14 @@ class GiveawayCog(commands.Cog):
         )
         await asyncio.gather(*(self.run_claim_countdown(source_channel, record, winner) for winner in winners))
 
-    @giveaway.command(name="iniciar", description="Inicia un sorteo con reaccion para participar.")
+    @app_commands.command(name="giveway", description="Inicia un sorteo con reaccion para participar.")
     @app_commands.describe(
         premio="Premio del sorteo",
         duracion="Duracion abreviada: 1h, 1d, 2h 30m, 1y",
         ganadores="Cantidad de ganadores",
         canal="Canal donde publicar el sorteo",
+        canal_reclamo_id="ID, mencion o enlace del canal donde el ganador debe mencionarte",
     )
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def start(
         self,
@@ -729,6 +688,7 @@ class GiveawayCog(commands.Cog):
         duracion: str,
         ganadores: app_commands.Range[int, 1, 10] = 1,
         canal: Optional[discord.TextChannel] = None,
+        canal_reclamo_id: Optional[str] = None,
     ) -> None:
         if interaction.guild is None:
             await interaction.response.send_message("Este comando solo funciona dentro de un servidor.", ephemeral=True)
@@ -771,7 +731,17 @@ class GiveawayCog(commands.Cog):
         gift_emoji = resolve_named_emoji(interaction.guild, "gift_1", FALLBACK_GIFT_EMOJI)
         reaction_emoji = resolve_named_emoji(interaction.guild, "react_gift", DEFAULT_REACTION_EMOJI)
         ends_at = discord.utils.utcnow().timestamp() + duration_seconds
-        claim_channel_id = self.settings.giveaway_claim_channel_id or target.id
+        fallback_claim_channel_id = self.settings.giveaway_claim_channel_id or target.id
+        try:
+            claim_channel_id = await self.resolve_claim_channel_id(
+                interaction.guild,
+                canal_reclamo_id,
+                fallback_claim_channel_id,
+            )
+        except ValueError as exc:
+            await interaction.response.send_message(str(exc), ephemeral=True)
+            return
+
         record = GiveawayRecord(
             guild_id=interaction.guild.id,
             channel_id=target.id,
@@ -812,23 +782,8 @@ class GiveawayCog(commands.Cog):
         self.records[key] = record
         self.save_records()
         self.schedule_giveaway(key, record)
-        external_sent = await self.send_external_announcement(record, interaction.guild)
-
-        extra = " Aviso externo enviado." if external_sent else " No pude enviar el aviso externo."
 
         await interaction.followup.send(
-            f"Sorteo creado en {target.mention}. Termina en {format_duration(duration_seconds)}.{extra}",
+            f"Sorteo creado en {target.mention}. Termina en {format_duration(duration_seconds)}.",
             ephemeral=True,
         )
-
-    @giveaway.error
-    async def giveaway_error(interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
-        if isinstance(error, app_commands.MissingPermissions):
-            message = "Necesitas permiso de **Manage Server** para administrar sorteos."
-            if interaction.response.is_done():
-                await interaction.followup.send(message, ephemeral=True)
-            else:
-                await interaction.response.send_message(message, ephemeral=True)
-            return
-
-        raise error

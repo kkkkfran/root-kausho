@@ -100,8 +100,6 @@ class AboutCog(commands.Cog):
 
     @app_commands.command(name="servidor", description="Publica de que va el servidor y los servicios disponibles.")
     @app_commands.describe(canal="Canal donde publicar la presentacion. Si lo dejas vacio, usa este canal.")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def server_info(
         self,
@@ -133,7 +131,7 @@ class AboutCog(commands.Cog):
     @server_info.error
     async def server_info_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
         if isinstance(error, app_commands.MissingPermissions):
-            message = "Necesitas permiso de **Manage Server** para publicar esta presentacion."
+            message = "Este comando solo puede usarlo el owner del bot."
             if interaction.response.is_done():
                 await interaction.followup.send(message, ephemeral=True)
             else:

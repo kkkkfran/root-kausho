@@ -82,8 +82,6 @@ class RulesCog(commands.Cog):
 
     @app_commands.command(name="reglas", description="Publica las reglas oficiales del servidor.")
     @app_commands.describe(canal="Canal donde publicar las reglas. Si lo dejas vacio, usa este canal.")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def rules(
         self,
@@ -115,7 +113,7 @@ class RulesCog(commands.Cog):
     @rules.error
     async def rules_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
         if isinstance(error, app_commands.MissingPermissions):
-            message = "Necesitas permiso de **Manage Server** para publicar las reglas."
+            message = "Este comando solo puede usarlo el owner del bot."
             if interaction.response.is_done():
                 await interaction.followup.send(message, ephemeral=True)
             else:

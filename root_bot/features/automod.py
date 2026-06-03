@@ -243,8 +243,6 @@ class AutoModCog(commands.Cog):
             app_commands.Choice(name="desactivar", value="desactivar"),
         ]
     )
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def automod(self, interaction: discord.Interaction, accion: app_commands.Choice[str]) -> None:
         if accion.value == "activar":
@@ -275,7 +273,7 @@ class AutoModCog(commands.Cog):
     @automod.error
     async def automod_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
         if isinstance(error, app_commands.MissingPermissions):
-            message = "Necesitas permiso de **Manage Server** para usar AutoMod."
+            message = "Este comando solo puede usarlo el owner del bot."
             if interaction.response.is_done():
                 await interaction.followup.send(message, ephemeral=True)
             else:

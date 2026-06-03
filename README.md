@@ -58,14 +58,13 @@ AUTOMOD_BLOCK_INVITES=true
 AUTOMOD_BLOCK_LINKS=true
 MOD_LOG_CHANNEL_ID=1509748290110095471
 MOD_LOG_EMBED_COLOR=111111
+BOT_OWNER_ID=1299297166778568801
 GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822
-GIVEAWAY_ANNOUNCE_CHANNEL_ID=1499069695956090911
-GIVEAWAY_INVITE_URL="https://discord.gg/GcxEyxxzcm"
 GIVEAWAY_EMBED_COLOR=FFFFFF
 GIVEAWAY_DATA_FILE="data/giveaways.json"
 ```
 
-`DISCORD_GUILD_ID` es recomendado para que los comandos aparezcan rapido en tu servidor. Sin eso, Discord puede tardar en mostrar comandos globales.
+Los comandos slash se sincronizan globalmente para que el owner pueda usarlos en cualquier servidor donde este el bot. `BOT_OWNER_ID` define el unico usuario autorizado a ejecutar comandos.
 
 ## Comandos
 
@@ -73,7 +72,7 @@ GIVEAWAY_DATA_FILE="data/giveaways.json"
 
 Publica un embed rojo con reglas generales del servidor.
 
-Solo pueden usarlo personas con permiso **Manage Server**. Puedes ejecutarlo en el canal donde quieres publicar las reglas, o elegir otro canal desde el parametro `canal`.
+Solo puede usarlo el usuario configurado en `BOT_OWNER_ID`. Puedes ejecutarlo en el canal donde quieres publicar las reglas, o elegir otro canal desde el parametro `canal`.
 
 ### `/servidor`
 
@@ -84,7 +83,7 @@ Incluye un boton **Crear ticket** usando:
 - `TICKET_CHANNEL_ID`
 - `TICKET_URL`
 
-Solo pueden usarlo personas con permiso **Manage Server**. Puedes ejecutarlo en el canal donde quieres publicarlo, o elegir otro canal desde el parametro `canal`.
+Solo puede usarlo el usuario configurado en `BOT_OWNER_ID`. Puedes ejecutarlo en el canal donde quieres publicarlo, o elegir otro canal desde el parametro `canal`.
 
 ### `/panel-ticket`
 
@@ -138,7 +137,7 @@ Variables:
 
 El log de sanciones registra usuario, canal, accion, razon, duracion del aislamiento y contenido eliminado.
 
-### `/sorteo iniciar`
+### `/giveway`
 
 Crea un sorteo con embed negro/blanco, mencion oculta `||@everyone||` y reaccion para participar.
 
@@ -148,19 +147,18 @@ Parametros:
 - `duracion`: cuanto dura el sorteo usando abreviaciones, por ejemplo `1h`, `3h`, `1d`, `2h 30m` o `1y`
 - `ganadores`: cantidad de ganadores
 - `canal`: canal opcional donde publicarlo
+- `canal_reclamo_id`: ID, mencion o enlace del canal donde el ganador debe mencionarte; si lo dejas vacio usa `GIVEAWAY_CLAIM_CHANNEL_ID`
 
 El bot busca estos emojis personalizados en el servidor:
 
 - `:gift_1:` para decorar el embed
 - `:react_gift:` para participar
 
-Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Cuando termina el sorteo, el ganador tiene 10 segundos para mencionar al organizador en `GIVEAWAY_CLAIM_CHANNEL_ID`. Si no lo hace, el embed se edita marcando la recompensa como perdida.
+Si alguno no existe o no se puede usar, cae al emoji de regalo normal. Cuando termina el sorteo, el ganador tiene 10 segundos para mencionar al organizador en el canal de reclamo elegido. Si no lo hace, el embed se edita marcando la recompensa como perdida.
 
 El embed del ganador muestra su avatar como miniatura y mantiene el temporizador visible mientras reclama.
 
-Tambien envia un aviso externo a `GIVEAWAY_ANNOUNCE_CHANNEL_ID` con un boton de invitacion. Ese aviso no tiene reaccion y no permite participar desde el otro servidor; solo manda a la persona al servidor oficial.
-
-### `/sorteo reroll`
+### `/reroll`
 
 Elige un nuevo ganador desde un sorteo ya finalizado.
 
@@ -174,9 +172,8 @@ El reroll ignora al ultimo ganador registrado para intentar elegir una persona n
 
 Variables:
 
+- `BOT_OWNER_ID=1299297166778568801` unico usuario que puede ejecutar comandos del bot
 - `GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822` canal donde el ganador debe reclamar
-- `GIVEAWAY_ANNOUNCE_CHANNEL_ID=1499069695956090911` canal externo donde se anuncia el sorteo
-- `GIVEAWAY_INVITE_URL=https://discord.gg/GcxEyxxzcm` invitacion del servidor oficial para el boton
 - `GIVEAWAY_EMBED_COLOR=FFFFFF` color del embed del sorteo
 - `GIVEAWAY_DATA_FILE=data/giveaways.json` archivo local para recordar sorteos activos si el bot se reinicia
 
@@ -247,9 +244,8 @@ AUTOMOD_TIMEOUT_SECONDS=300
 AUTOMOD_WARNING_DELETE_SECONDS=8
 MOD_LOG_CHANNEL_ID=1509748290110095471
 MOD_LOG_EMBED_COLOR=111111
+BOT_OWNER_ID=1299297166778568801
 GIVEAWAY_CLAIM_CHANNEL_ID=1507802013851717822
-GIVEAWAY_ANNOUNCE_CHANNEL_ID=1499069695956090911
-GIVEAWAY_INVITE_URL=https://discord.gg/GcxEyxxzcm
 GIVEAWAY_EMBED_COLOR=FFFFFF
 GIVEAWAY_DATA_FILE=data/giveaways.json
 ```

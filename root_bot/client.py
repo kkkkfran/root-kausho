@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from .config import Settings, load_settings
@@ -17,13 +18,32 @@ from .features.welcome import WelcomeCog
 logger = logging.getLogger("root-bot")
 
 
+class OwnerOnlyCommandTree(app_commands.CommandTree):
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        settings = getattr(self.client, "settings", None)
+        owner_id = getattr(settings, "bot_owner_id", None)
+        if owner_id is None or interaction.user.id == owner_id:
+            return True
+
+        message = "Este bot es privado. Solo el owner puede usar sus comandos."
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(message, ephemeral=True)
+            else:
+                await interaction.response.send_message(message, ephemeral=True)
+        except discord.DiscordException:
+            logger.warning("No pude responder bloqueo de comando para usuario %s.", interaction.user.id)
+
+        return False
+
+
 class RootBot(commands.Bot):
     def __init__(self, settings: Settings) -> None:
         intents = discord.Intents.default()
         intents.members = True
         intents.message_content = True
 
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(command_prefix="!", intents=intents, tree_cls=OwnerOnlyCommandTree)
         self.settings = settings
         self._presence_ready = False
 
@@ -41,13 +61,9 @@ class RootBot(commands.Bot):
 
         if self.settings.guild_id is not None:
             guild = discord.Object(id=self.settings.guild_id)
-            self.tree.copy_global_to(guild=guild)
-            synced = await self.tree.sync(guild=guild)
-            logger.info("Slash commands sincronizados en guild %s: %s", self.settings.guild_id, len(synced))
-            self.tree.clear_commands(guild=None)
-            cleared = await self.tree.sync()
-            logger.info("Slash commands globales limpiados para evitar duplicados: %s", len(cleared))
-            return
+            self.tree.clear_commands(guild=guild)
+            cleared_guild = await self.tree.sync(guild=guild)
+            logger.info("Slash commands especificos de guild %s limpiados: %s", self.settings.guild_id, len(cleared_guild))
 
         synced = await self.tree.sync()
         logger.info("Slash commands globales sincronizados: %s", len(synced))

@@ -541,8 +541,6 @@ class TicketCog(commands.Cog):
 
     @app_commands.command(name="panel-ticket", description="Publica el panel para crear tickets.")
     @app_commands.describe(canal="Canal donde publicar el panel. Si lo dejas vacio, usa el canal configurado.")
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.guild_only()
     async def panel_ticket(
         self,
@@ -582,7 +580,7 @@ class TicketCog(commands.Cog):
     @panel_ticket.error
     async def panel_ticket_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
         if isinstance(error, app_commands.MissingPermissions):
-            message = "Necesitas permiso de **Manage Server** para publicar el panel de tickets."
+            message = "Este comando solo puede usarlo el owner del bot."
             if interaction.response.is_done():
                 await interaction.followup.send(message, ephemeral=True)
             else:
