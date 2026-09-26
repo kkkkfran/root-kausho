@@ -61,7 +61,7 @@ APPLICATION_ID = os.getenv("DISCORD_APPLICATION_ID", "1508312731227258961")
 BOT_TOKEN = os.getenv("DISCORD_TOKEN", "")
 
 # ID de usuario destino (Owner o usuario a quien se le asocia el widget)
-TARGET_USER_ID = os.getenv("BOT_OWNER_ID", "1299297166778568801")
+TARGET_USER_ID = os.getenv("BOT_OWNER_ID", "453319707743748106")
 
 # Identificador interno del proveedor para la identidad (por defecto 'default' o 'owner')
 PROVIDER_ISSUED_USER_ID = "owner"
