@@ -285,9 +285,9 @@ def obtain_user_access_token(client_secret: str) -> str | None:
     except Exception as e:
         print(f" [!] No se pudo abrir automáticamente el navegador: {e}")
 
-    print(" Esperando autorización en el navegador...")
-    # Esperar hasta 120 segundos a que el usuario autorice
-    got_code = code_event.wait(timeout=120)
+    print(" Esperando autorización en el navegador (tienes hasta 5 minutos)...", flush=True)
+    # Esperar hasta 300 segundos (5 minutos) a que el usuario autorice
+    got_code = code_event.wait(timeout=300)
 
     server.shutdown()
     server.server_close()
