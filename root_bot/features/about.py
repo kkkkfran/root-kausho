@@ -81,6 +81,55 @@ def build_about_embed(guild: discord.Guild, settings: Settings) -> discord.Embed
     return embed
 
 
+def build_profile_embed(settings: Settings) -> discord.Embed:
+    embed = discord.Embed(
+        title="Tablero & Perfil Personal | kkkkfran",
+        description=(
+            "Te presento a mis mascotas y mis canales y redes sociales oficiales.\n\n"
+            "**Mascotas:**\n"
+            "• **Katiusca (Katy)** — Clave asset: `foto_katy`\n"
+            "• **Chubaca** — Clave asset: `chubaca`\n\n"
+            "**Redes Sociales Oficiales:**\n"
+            "• **Instagram:** [@kkkkfran](https://instagram.com/kkkkfran)\n"
+            "• **TikTok:** [@kkkkfran](https://tiktok.com/@kkkkfran)\n"
+            "• **YouTube:** [@kaushitoo](https://youtube.com/@kaushitoo)\n"
+        ),
+        color=discord.Color(settings.about_embed_color),
+        timestamp=discord.utils.utcnow(),
+    )
+    embed.set_footer(text="root-kaush | Mascotas & Redes Oficiales")
+    return embed
+
+
+class ProfileSocialsView(discord.ui.View):
+    def __init__(self) -> None:
+        super().__init__(timeout=None)
+        self.add_item(
+            discord.ui.Button(
+                label="Instagram",
+                style=discord.ButtonStyle.link,
+                url="https://instagram.com/kkkkfran",
+                emoji="📸",
+            )
+        )
+        self.add_item(
+            discord.ui.Button(
+                label="TikTok",
+                style=discord.ButtonStyle.link,
+                url="https://tiktok.com/@kkkkfran",
+                emoji="🎵",
+            )
+        )
+        self.add_item(
+            discord.ui.Button(
+                label="YouTube",
+                style=discord.ButtonStyle.link,
+                url="https://youtube.com/@kaushitoo",
+                emoji="▶️",
+            )
+        )
+
+
 class TicketLinkView(discord.ui.View):
     def __init__(self, settings: Settings) -> None:
         super().__init__(timeout=None)
@@ -128,8 +177,40 @@ class AboutCog(commands.Cog):
         await target.send(embed=build_about_embed(interaction.guild, self.settings), view=TicketLinkView(self.settings))
         await interaction.response.send_message(f"Presentacion publicada en {target.mention}.", ephemeral=True)
 
+    @app_commands.command(name="perfil", description="Muestra el tablero y tarjeta de perfil (Katy, Chubaca y Redes Sociales).")
+    @app_commands.describe(canal="Canal donde publicar la tarjeta. Si lo dejas vacio, usa este canal.")
+    @app_commands.guild_only()
+    async def profile_info(
+        self,
+        interaction: discord.Interaction,
+        canal: Optional[discord.TextChannel] = None,
+    ) -> None:
+        if interaction.guild is None:
+            await interaction.response.send_message("Este comando solo funciona dentro de un servidor.", ephemeral=True)
+            return
+
+        target = canal or interaction.channel
+        if not isinstance(target, discord.TextChannel):
+            await interaction.response.send_message("Usa este comando en un canal de texto normal.", ephemeral=True)
+            return
+
+        me = interaction.guild.me
+        if me is not None:
+            permissions = target.permissions_for(me)
+            if not permissions.view_channel or not permissions.send_messages or not permissions.embed_links:
+                await interaction.response.send_message(
+                    f"No tengo permisos para publicar en {target.mention}.",
+                    ephemeral=True,
+                )
+                return
+
+        embed = build_profile_embed(self.settings)
+        await target.send(embed=embed, view=ProfileSocialsView())
+        await interaction.response.send_message(f"Tarjeta de perfil publicada en {target.mention}.", ephemeral=True)
+
     @server_info.error
-    async def server_info_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+    @profile_info.error
+    async def command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
         if isinstance(error, app_commands.MissingPermissions):
             message = "Este comando solo puede usarlo el owner del bot."
             if interaction.response.is_done():
